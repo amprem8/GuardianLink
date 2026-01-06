@@ -1,8 +1,8 @@
 import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.navigator.Navigator
-import ui.SplashScreen
+import screens.SplashScreenActivity
 
 @Composable
 fun SOSApp() {
-    Navigator(SplashScreen())
+    Navigator(SplashScreenActivity())
 }

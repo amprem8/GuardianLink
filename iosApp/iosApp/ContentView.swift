@@ -3,7 +3,7 @@ import Shared // <-- import KMP framework
 
 struct ComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
-        return SOSBridgeKt.SOSViewController()
+        return SOSViewControllerKt.SOSViewController()
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}

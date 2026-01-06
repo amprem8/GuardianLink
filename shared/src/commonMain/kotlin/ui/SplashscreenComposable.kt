@@ -1,31 +1,14 @@
 package ui
 
-import androidx.compose.animation.core.EaseOut
-import androidx.compose.animation.core.StartOffset
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.keyframes
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -35,47 +18,42 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.model.rememberScreenModel
-import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import screenmodel.SplashScreenModel
-
-class SplashScreen : Screen {
-
-    @Composable
-    override fun Content() {
-        val navigator = LocalNavigator.current
-        val model = rememberScreenModel { SplashScreenModel() }
-        val finished by model.finished.collectAsState()
-
-        LaunchedEffect(finished) {
-            if (finished) {
-                navigator?.replace(LoginScreen())
-            }
-        }
-
-        SplashScreenContent()
-    }
+import platform.PlatformConfig
 
 @Composable
 fun SplashScreenContent() {
+    if (PlatformConfig.isAndroid) {
+        AndroidSplash()
+    } else {
+        IosSplash()
+    }
+}
 
+@Composable
+private fun rememberSplashAnimation(): SplashAnimationState {
     val infinite = rememberInfiniteTransition()
 
     val pulseScale by infinite.animateFloat(
-        1f, 1.4f,
-        infiniteRepeatable(tween(1200, easing = EaseOut))
+        initialValue = 1f,
+        targetValue = 1.4f,
+        animationSpec = infiniteRepeatable(
+            tween(1200, easing = EaseOut)
+        )
     )
 
     val pulseAlpha by infinite.animateFloat(
-        0.3f, 0f,
-        infiniteRepeatable(tween(1200))
+        initialValue = 0.3f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            tween(1200)
+        )
     )
 
     @Composable
     fun bounce(delay: Int) = infinite.animateFloat(
-        0f, -8f,
-        infiniteRepeatable(
+        initialValue = 0f,
+        targetValue = -8f,
+        animationSpec = infiniteRepeatable(
             keyframes {
                 durationMillis = 600
                 0f at 0
@@ -86,27 +64,63 @@ fun SplashScreenContent() {
         )
     )
 
-    val d1 by bounce(0)
-    val d2 by bounce(150)
-    val d3 by bounce(300)
+    return SplashAnimationState(
+        pulseScale,
+        pulseAlpha,
+        bounce(0).value,
+        bounce(150).value,
+        bounce(300).value
+    )
+}
 
+private data class SplashAnimationState(
+    val pulseScale: Float,
+    val pulseAlpha: Float,
+    val d1: Float,
+    val d2: Float,
+    val d3: Float
+)
+
+@Composable
+private fun AndroidSplash() {
+    val anim = rememberSplashAnimation()
+
+    SplashBaseLayout(anim) {
+        Text("Guardian", color = Color.White, fontSize = 28.sp)
+        Text("Link", color = Color(0xFFD8B4FE), fontSize = 28.sp)
+    }
+}
+
+@Composable
+private fun IosSplash() {
+    val anim = rememberSplashAnimation()
+
+    SplashBaseLayout(anim) {
+        Text("Guardian", color = Color.White, fontSize = 32.sp)
+    }
+}
+
+@Composable
+private fun SplashBaseLayout(
+    anim: SplashAnimationState,
+    titleContent: @Composable ColumnScope.() -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Brush.linearGradient(
                     colorStops = arrayOf(
-                        0.0f to Color(0xFF2563EB), // blue-600
-                        0.42f to Color(0xFF1D4ED8), // blue-700 (via)
-                        1.0f to Color(0xFF7C3AED)  // purple (OKLCH compensated)
+                        0.0f to Color(0xFF2563EB),
+                        0.42f to Color(0xFF1D4ED8),
+                        1.0f to Color(0xFF7C3AED)
                     ),
-                    start = Offset(0f, 0f),
+                    start = Offset.Zero,
                     end = Offset.Infinite
                 )
             ),
         contentAlignment = Alignment.Center
     ) {
-
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
             Box(Modifier.size(140.dp), contentAlignment = Alignment.Center) {
@@ -114,8 +128,8 @@ fun SplashScreenContent() {
                 Box(
                     Modifier
                         .size(140.dp)
-                        .scale(pulseScale)
-                        .alpha(pulseAlpha)
+                        .scale(anim.pulseScale)
+                        .alpha(anim.pulseAlpha)
                         .background(Color.White, CircleShape)
                 )
 
@@ -136,8 +150,7 @@ fun SplashScreenContent() {
 
             Spacer(Modifier.height(32.dp))
 
-            Text("Guardian", color = Color.White, fontSize = 28.sp)
-            Text("Link", color = Color(0xFFD8B4FE), fontSize = 28.sp)
+            titleContent()
 
             Spacer(Modifier.height(8.dp))
 
@@ -150,9 +163,9 @@ fun SplashScreenContent() {
             Spacer(Modifier.height(32.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Dot(d1)
-                Dot(d2)
-                Dot(d3)
+                Dot(anim.d1)
+                Dot(anim.d2)
+                Dot(anim.d3)
             }
         }
     }
@@ -166,5 +179,4 @@ private fun Dot(offset: Float) {
             .offset(y = offset.dp)
             .background(Color.White, CircleShape)
     )
-}}
-
+}
