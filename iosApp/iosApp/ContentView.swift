@@ -1,10 +1,9 @@
-import UIKit
 import SwiftUI
-import ComposeApp
+import Shared // <-- import KMP framework
 
 struct ComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
-        MainViewControllerKt.MainViewController()
+        return SOSBridgeKt.SOSViewController()
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
@@ -16,6 +15,3 @@ struct ContentView: View {
             .ignoresSafeArea()
     }
 }
-
-
-
