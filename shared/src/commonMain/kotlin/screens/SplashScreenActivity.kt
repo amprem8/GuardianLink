@@ -8,7 +8,6 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import screenmodel.SplashScreenModel
-import ui.LoginScreen
 import ui.SplashScreenContent
 
 class SplashScreenActivity : Screen {
@@ -21,7 +20,7 @@ class SplashScreenActivity : Screen {
 
         LaunchedEffect(finished) {
             if (finished) {
-                navigator?.replace(LoginScreen())
+                navigator?.replace(AuthScreenActivity())
             }
         }
 

@@ -4,15 +4,13 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -87,7 +85,6 @@ private fun AndroidSplash() {
 
     SplashBaseLayout(anim) {
         Text("Guardian", color = Color.White, fontSize = 28.sp)
-        Text("Link", color = Color(0xFFD8B4FE), fontSize = 28.sp)
     }
 }
 
@@ -110,17 +107,16 @@ private fun SplashBaseLayout(
             .fillMaxSize()
             .background(
                 Brush.linearGradient(
-                    colorStops = arrayOf(
-                        0.0f to Color(0xFF2563EB),
-                        0.42f to Color(0xFF1D4ED8),
-                        1.0f to Color(0xFF7C3AED)
+                    colors = listOf(
+                        Color(0xFF2563EB), // Blue start
+                        Color(0xFF7C3AED)  // Purple end
                     ),
                     start = Offset.Zero,
                     end = Offset.Infinite
                 )
             ),
         contentAlignment = Alignment.Center
-    ) {
+    )  {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
             Box(Modifier.size(140.dp), contentAlignment = Alignment.Center) {
@@ -134,17 +130,13 @@ private fun SplashBaseLayout(
                 )
 
                 Box(
-                    Modifier
+                    modifier = Modifier
                         .size(120.dp)
+                        .shadow(16.dp, CircleShape)
                         .background(Color.White, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.Lock,
-                        contentDescription = "Shield",
-                        tint = Color(0xFF2563EB),
-                        modifier = Modifier.size(64.dp)
-                    )
+                    Text("🛡️", fontSize = 52.sp)
                 }
             }
 
