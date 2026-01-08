@@ -14,17 +14,30 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import platform.PlatformConfig
 
+
+private object LogoConfig {
+    val outerSize: Dp
+        @Composable get() = if (PlatformConfig.isAndroid) 140.dp else 120.dp
+
+    val innerSize: Dp
+        @Composable get() = if (PlatformConfig.isAndroid) 120.dp else 100.dp
+
+    val iconFontSize: TextUnit
+        @Composable get() = if (PlatformConfig.isAndroid) 52.sp else 44.sp
+
+    val titleFontSize: TextUnit
+        @Composable get() = if (PlatformConfig.isAndroid) 28.sp else 32.sp
+}
+
 @Composable
 fun SplashScreenContent() {
-    if (PlatformConfig.isAndroid) {
-        AndroidSplash()
-    } else {
-        IosSplash()
-    }
+        PlatformSplash(title = "Guardian")
 }
 
 @Composable
@@ -80,20 +93,11 @@ private data class SplashAnimationState(
 )
 
 @Composable
-private fun AndroidSplash() {
+private fun PlatformSplash(title: String) {
     val anim = rememberSplashAnimation()
 
     SplashBaseLayout(anim) {
-        Text("Guardian", color = Color.White, fontSize = 28.sp)
-    }
-}
-
-@Composable
-private fun IosSplash() {
-    val anim = rememberSplashAnimation()
-
-    SplashBaseLayout(anim) {
-        Text("Guardian", color = Color.White, fontSize = 32.sp)
+        Text(title, color = Color.White, fontSize = LogoConfig.titleFontSize)
     }
 }
 
@@ -136,7 +140,7 @@ private fun SplashBaseLayout(
                         .background(Color.White, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("🛡️", fontSize = 52.sp)
+                    Text("🛡️", fontSize = LogoConfig.iconFontSize)
                 }
             }
 
