@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import ui.AuthScreenContent
-import ui.LoginScreen
 
 class AuthScreenActivity : Screen {
 
@@ -16,9 +15,6 @@ class AuthScreenActivity : Screen {
             onSignup = {
                /*later*/
             },
-            onLogin = {
-                navigator?.push(LoginScreen())
-            }
         )
     }
 }

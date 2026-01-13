@@ -18,7 +18,6 @@ import platform.PlatformConfig
 
 @Composable
 fun AuthScreenContent(
-    onLogin: () -> Unit,
     onSignup: () -> Unit
 ) {
     val isAndroid = PlatformConfig.isAndroid
@@ -129,23 +128,6 @@ fun AuthScreenContent(
                     ) {
                         Text("Create Account", color = Color.White)
                     }
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                Button(
-                    onClick = onLogin,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(buttonHeight),
-                    shape = RoundedCornerShape(cornerRadius),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Text(
-                        "Sign In",
-                        color = Color(0xFF2563EB)
-                    )
                 }
 
                 Spacer(Modifier.height(12.dp))
