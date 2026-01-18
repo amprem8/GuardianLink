@@ -1,4 +1,4 @@
-This is a Kotlin Multiplatform project targeting Android, iOS, Server.
+GuardianLink is a Kotlin Multiplatform (KMP) project targeting Android, iOS, and Server, designed using a shared UI and shared business logic architecture to minimize duplication, reduce platform-specific bugs, and simplify long-term maintenance. The project is structured to support production-grade deployment to both the Google Play Store and Apple App Store while keeping development efficient and scalable.
 
 * [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
   It contains several subfolders:
@@ -22,6 +22,7 @@ This is a Kotlin Multiplatform project targeting Android, iOS, Server.
 
 To build and run the development version of the Android app, use the run configuration from the run widget
 in your IDE’s toolbar or build it directly from the terminal:
+
 - on macOS/Linux
   ```shell
   ./gradlew :composeApp:assembleDebug
@@ -35,6 +36,7 @@ in your IDE’s toolbar or build it directly from the terminal:
 
 To build and run the development version of the server, use the run configuration from the run widget
 in your IDE’s toolbar or run it directly from the terminal:
+
 - on macOS/Linux
   ```shell
   ./gradlew :server:run
@@ -52,4 +54,16 @@ in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and r
 ---
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…# GuardianLink
-# GuardianLink
+
+The `composeApp` module contains the shared UI built using Compose Multiplatform. All common UI components, screens, navigation, and presentation logic live in this module, enabling a single UI codebase to run across Android and iOS. Platform-specific UI behavior, permissions, or integrations can still be handled using conditional logic or platform-specific source sets such as `androidMain` and `iosMain`, while the majority of UI remains in `commonMain`.
+
+The `shared` module holds the core business logic used by all platforms. This includes authentication and OTP workflows, SOS triggering logic, encryption, data models, offline-first storage strategies, and domain-level state management. The `commonMain` source set acts as the single source of truth, while platform-specific implementations are provided through `androidMain`, `iosMain`, and `jvmMain` using the expect/actual mechanism where required.
+
+The `iosApp` directory contains the iOS application entry point required by Xcode. Even when using Compose Multiplatform for UI, this module is necessary to bootstrap the app, configure signing, manage app lifecycle, and integrate with SwiftUI or UIKit when platform-native features are needed. The iOS app consumes the shared UI and logic exposed by the KMP modules.
+
+The `server` module is a Ktor-based backend service used for server-side operations such as push notification coordination, authentication support, or telemetry if required. It shares data models and logic from the `shared` module, ensuring consistency between client and server behavior.
+
+To build and run the Android application, developers can use the IDE run configuration or execute `./gradlew :composeApp:assembleDebug` on macOS or Linux, or `.\gradlew.bat :composeApp:assembleDebug` on Windows. The server can be started using `./gradlew :server:run` (or the Windows equivalent). The iOS application is built and run directly from Xcode by opening the `iosApp` directory and selecting a simulator or physical device.
+
+This architecture provides an optimized balance between developer productivity and user experience by sharing as much code as possible while still allowing platform-specific optimizations where absolutely necessary, making it well-suited for a safety-critical, cross-platform application like GuardianLink.
+

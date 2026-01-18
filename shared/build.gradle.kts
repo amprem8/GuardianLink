@@ -1,41 +1,67 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
+    kotlin("multiplatform")
+    id("com.android.library")
+    id("org.jetbrains.compose")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 kotlin {
+
     androidTarget {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+        compilations.all {
+            compilerOptions.configure {
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+            }
         }
     }
-    
+
+    iosX64()
     iosArm64()
     iosSimulatorArm64()
-    
-    jvm()
-    
-    sourceSets {
-        commonMain.dependencies {
-            // put your Multiplatform dependencies here
-            //okay
+
+    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>()
+        .configureEach {
+            binaries.framework {
+                baseName = "Shared"
+                isStatic = false
+            }
         }
-        commonTest.dependencies {
-            implementation(libs.kotlin.test)
+
+    sourceSets {
+
+        val commonMain by getting {
+            dependencies {
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.ui)
+
+                implementation(compose.materialIconsExtended)
+
+                // Navigation
+                implementation(libs.voyager.navigator)
+                implementation(libs.voyager.screenmodel)
+
+                implementation(libs.kotlinx.coroutines.core)
+            }
         }
     }
 }
 
 android {
-    namespace = "com.example.guardianlink.shared"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    namespace = "com.example.sos.shared"
+    compileSdk = 36
+
+    defaultConfig {
+        minSdk = 24
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-    }
-    defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
     }
 }
