@@ -22,7 +22,7 @@ jobs:
         run: ./gradlew clean :server:fatJar
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: guardianlink-api-jar
           path: server/build/libs/server-all-1.0.0.jar
