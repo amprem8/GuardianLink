@@ -6,35 +6,47 @@ plugins {
 
 group = "com.example.guardianlink"
 version = "1.0.0"
+
 application {
-    mainClass.set("com.example.guardianlink.ApplicationKt")
+    // Lambda entry point
+    mainClass.set("com.example.guardianlink.LambdaHandler")
 
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
-tasks.jar {
+
+tasks.register<Jar>("fatJar") {
+    archiveBaseName.set("${project.name}-all") // server-all.jar
+    archiveVersion.set("${project.version}")
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     manifest {
-        attributes["Main-Class"] = "com.guardianlink.LambdaHandler"
+        attributes["Main-Class"] = "com.example.guardianlink.LambdaHandler"
     }
 
+    // Include runtime dependencies
     from({
         configurations.runtimeClasspath.get()
             .filter { it.name.endsWith("jar") }
             .map { zipTree(it) }
     })
 
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // Include compiled classes
+    from(sourceSets.main.get().output)
 }
 
 dependencies {
     implementation(project(":shared-core"))
     implementation(libs.logback)
     implementation(libs.ktor.serverCore)
+    implementation(libs.aws.lambda.java.core)
+    implementation(libs.aws.lambda.java.events)
+    implementation(libs.ktor.server.cio)
     implementation(libs.ktor.serverNetty)
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.ktor.serialization.kotlinx.json)
-
 
     // AWS SDK for DynamoDB
     implementation(libs.dynamodb)
