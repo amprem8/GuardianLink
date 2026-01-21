@@ -21,18 +21,14 @@ class LambdaHandler : RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResp
         context.logger.log("Request: $method $path")
 
         return try {
-            when (path) {
-                "/signup" ->
-                    SignupHandler.handle(request, json)
-
-                "/login" ->
-                    LoginHandler.handle(request, json)
-
-                else -> response(404, """{"message":"Route not found"}""")
-            }
+                when (path) {
+                    "/signup" -> SignupHandler.handle(request, json)
+                    "/login"  -> LoginHandler.handle(request, json)
+                    else      -> HttpResponses.notFound()
+                }
         } catch (e: Exception) {
             context.logger.log("ERROR: ${e.stackTraceToString()}")
-            response(500, """{"message":"Internal Server Error"}""")
+            HttpResponses.internalError()
         }
     }
 
