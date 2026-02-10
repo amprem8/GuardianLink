@@ -13,7 +13,7 @@ class AuthScreenActivity : Screen {
 
         AuthScreenContent(
             onSignup = {
-               /*later*/
+               navigator?.replace(HomeScreenActivity())
             },
         )
     }
