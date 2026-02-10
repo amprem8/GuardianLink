@@ -12,6 +12,7 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        maven("https://maven.pkg.jetbrains.tech/public/jetbrains/collection/compose-multiplatform")
     }
 }
 
@@ -24,6 +25,7 @@ dependencyResolutionManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
+        maven("https://maven.pkg.jetbrains.tech/public/jetbrains/collection/compose-multiplatform")
         mavenCentral()
     }
 }
