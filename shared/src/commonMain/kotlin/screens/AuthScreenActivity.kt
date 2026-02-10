@@ -13,7 +13,8 @@ class AuthScreenActivity : Screen {
 
         AuthScreenContent(
             onSignup = {
-               /*later*/
+               //as of now
+                navigator?.push(OtpScreenActivity())
             },
         )
     }

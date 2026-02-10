@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.ktor)
     application
+    kotlin("plugin.serialization") version "2.1.0"
 }
 
 group = "com.example.guardianlink"
@@ -47,6 +48,7 @@ dependencies {
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.ktor.serialization.kotlinx.json)
+    implementation("software.amazon.awssdk:sns:2.41.20")
 
     // AWS SDK for DynamoDB
     implementation(libs.dynamodb)

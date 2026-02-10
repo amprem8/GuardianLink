@@ -9,23 +9,42 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
-          java-version: 21
           distribution: temurin
+          java-version: 21
+          cache: gradle   # ⚡ big speed win
 
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # ✅ compile everything
+      - name: Build
+        run: ./gradlew clean build -x test
+
+      # ✅ run server tests separately so logs are clear
+      - name: Run tests
+        run: ./gradlew :server:test
+
+      # ✅ create lambda jar
       - name: Build fat JAR
-        run: ./gradlew clean :server:fatJar
+        run: ./gradlew :server:fatJar
+
+      # ✅ verify artifact exists (prevents silent failures)
+      - name: Verify JAR
+        run: ls -lh server/build/libs/*-all.jar
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: guardianlink-api-jar
-          path: server/build/libs/server-all-1.0.0.jar
+          path: server/build/libs/*-all.jar
 
   deploy:
     if: github.ref == 'refs/heads/main'
@@ -33,8 +52,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
@@ -48,8 +65,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
-      - name: Deploy Lambda directly
+      - name: Deploy Lambda
         run: |
+          JAR=$(ls *-all.jar)
+          echo "Deploying $JAR"
           aws lambda update-function-code \
             --function-name guardianlink-api \
-            --zip-file fileb://server-all-1.0.0.jar
+            --zip-file fileb://$JAR

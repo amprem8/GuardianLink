@@ -31,12 +31,15 @@ kotlin {
 
         val commonMain by getting {
             dependencies {
+                implementation(project(":shared-core"))
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.material3)
                 implementation(compose.ui)
 
                 implementation(compose.materialIconsExtended)
+
+                implementation(compose.components.resources)
 
                 // Navigation
                 implementation(libs.voyager.navigator)
@@ -64,4 +67,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+}
+compose.resources {
+    publicResClass = true
 }

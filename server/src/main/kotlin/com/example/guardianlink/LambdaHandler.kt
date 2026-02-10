@@ -1,5 +1,6 @@
 package com.example.guardianlink
 
+import auth.OtpRoutes
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent
@@ -24,6 +25,8 @@ class LambdaHandler : RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResp
                 when (path) {
                     "/signup" -> SignupHandler.handle(request, json)
                     "/login"  -> LoginHandler.handle(request, json)
+                    "/otp/send" -> OtpRoutes.sendOtp(request)
+                    "/otp/verify" -> OtpRoutes.verifyOtp(request)
                     else      -> HttpResponses.notFound()
                 }
         } catch (e: Exception) {

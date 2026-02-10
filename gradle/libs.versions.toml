@@ -22,6 +22,7 @@ kotlinxSerializationJsonVersion = "1.6.0"
 ktor = "3.3.3"
 ktorSerializationKotlinxJson = "2.3.5"
 logback = "1.5.22"
+material3 = "1.4.0"
 regions = "2.41.9"
 voyagerScreenmodel = "1.1.0-beta03"
 kotlinStdlib = "2.3.0"
@@ -29,6 +30,7 @@ runner = "1.7.0"
 core = "1.7.0"
 
 [libraries]
+androidx-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
 aws-lambda-java-core = { module = "com.amazonaws:aws-lambda-java-core", version.ref = "awsLambdaJavaCore" }
 aws-lambda-java-events = { module = "com.amazonaws:aws-lambda-java-events", version.ref = "awsLambdaJavaEvents" }
 dynamodb = { module = "software.amazon.awssdk:dynamodb", version.ref = "regions" }
