@@ -17,7 +17,8 @@ import androidx.compose.ui.unit.*
 import platform.PlatformConfig
 
 @Composable
-fun AuthScreenContent(
+fun AuthScreenComposable(
+    onLogin: () -> Unit,
     onSignup: () -> Unit
 ) {
     val isAndroid = PlatformConfig.isAndroid
@@ -107,7 +108,7 @@ fun AuthScreenContent(
 
                 // 🟣 Create Account
                 Button(
-                    onClick = onSignup,
+                    onClick = onLogin,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(buttonHeight),

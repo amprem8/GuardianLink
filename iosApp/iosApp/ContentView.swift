@@ -1,5 +1,5 @@
 import SwiftUI
-import Shared // <-- import KMP framework
+import Shared
 
 struct ComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
