@@ -28,19 +28,25 @@ jobs:
           path: server/build/libs/server-all-1.0.0.jar
 
 
+
   sonarqube:
     name: SonarQube Analysis
     runs-on: ubuntu-latest
+    # 🔑 Required for PR decoration
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # required for better analysis
+          # ✅ Needed for accurate analysis & PR decoration
+          fetch-depth: 0
 
-      - name: Set up JDK 17
+      - name: Set up JDK 17 for Sonar
         uses: actions/setup-java@v4
         with:
           java-version: 17
-          distribution: 'zulu'
+          distribution: zulu
 
       - name: Cache SonarQube packages
         uses: actions/cache@v4
@@ -53,13 +59,33 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle
 
-      - name: Build and analyze
+      # PR analysis (with explicit PR parameters) vs. push analysis
+      - name: Build and analyze (PR)
+        if: ${{ github.event_name == 'pull_request' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew build sonar --info
+        run: |
+          ./gradlew build sonar --info \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.organization=amprem8 \
+            -Dsonar.projectKey=amprem8_GuardianLink \
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
+            -Dsonar.pullrequest.branch=${{ github.head_ref }} \
+            -Dsonar.pullrequest.base=${{ github.base_ref }}
+
+      - name: Build and analyze (push)
+        if: ${{ github.event_name == 'push' }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          ./gradlew build sonar --info \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.organization=amprem8 \
+            -Dsonar.projectKey=amprem8_GuardianLink
+  
 
   deploy:
     if: github.ref == 'refs/heads/main'
