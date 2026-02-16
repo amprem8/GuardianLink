@@ -17,159 +17,182 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+data class HomeUiState(
+    val userName: String,
+    val phoneNumber: String,
+    val contacts: List<String>,
+    val voicePhrase: String,
+    val gestureType: String,
+    val isOnline: Boolean
+)
+
+data class HomeActions(
+    val onTriggerSOS: () -> Unit,
+    val onEditContacts: () -> Unit,
+    val onEditConfig: () -> Unit,
+    val onLogout: () -> Unit
+)
+
 @Composable
 fun HomeScreen(
-    userName: String,
-    phoneNumber: String,
-    contacts: List<String>,
-    voicePhrase: String,
-    gestureType: String,
-    isOnline: Boolean,
-    onTriggerSOS: () -> Unit,
-    onEditContacts: () -> Unit,
-    onEditConfig: () -> Unit,
-    onLogout: () -> Unit
+    state: HomeUiState,
+    actions: HomeActions
 ) {
-    var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) 0.96f else 1f)
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF8FAFC))
             .padding(horizontal = 16.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(45.dp)   // ⭐ uniform spacing everywhere
+        verticalArrangement = Arrangement.spacedBy(45.dp)
     ) {
         Spacer(Modifier.width(3.dp))
-        // HEADER
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text("SOS Guardian", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text("Always ready to help", color = Color.Gray, fontSize = 14.sp)
-            }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        HomeHeader(state.isOnline, actions.onLogout)
+        SOSButton(actions.onTriggerSOS)
+        ContactsSection(state.contacts, actions.onEditContacts)
+        ConfigSection(state.voicePhrase, state.gestureType, actions.onEditConfig)
+        HybridInfoSection()
 
-                if (isOnline) {
-                    StatusChip("Online", Color(0xFFDCFCE7), Color(0xFF15803D))
-                } else {
-                    StatusChip("SMS Mode", Color(0xFFFEF3C7), Color(0xFF92400E))
-                }
-
-                Spacer(Modifier.width(12.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            Brush.linearGradient(
-                                listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
-                            ),
-                            CircleShape
-                        )
-                        .clickable { onLogout() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("👤")
-                }
-            }
+    }
+}
+@Composable
+private fun HomeHeader(isOnline: Boolean, onLogout: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text("SOS Guardian", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Text("Always ready to help", color = Color.Gray, fontSize = 14.sp)
         }
 
-        // SOS BUTTON
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .scale(scale)
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color(0xFFEF4444), Color(0xFFDC2626))
-                    ),
-                    RoundedCornerShape(24.dp)
-                )
-                .clickable {
-                    pressed = true
-                    onTriggerSOS()
-                    pressed = false
-                }
-                .padding(vertical = 36.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("⚠️", fontSize = 40.sp)
-                Spacer(Modifier.height(18.dp))
-                Text("Trigger SOS", color = Color.White, fontWeight = FontWeight.Bold)
-                Text(
-                    "Press to send emergency alert",
-                    color = Color(0xFFFFCDD2),
-                    fontSize = 12.sp
-                )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (isOnline) {
+                StatusChip("Online", Color(0xFFDCFCE7), Color(0xFF15803D))
+            } else {
+                StatusChip("SMS Mode", Color(0xFFFEF3C7), Color(0xFF92400E))
             }
-        }
 
-        // CONTACTS
-        DashboardCard(onEditContacts) {
-            Text("Emergency Contacts", fontWeight = FontWeight.Bold)
-            Text(
-                "${contacts.size} contact${if (contacts.size != 1) "s" else ""} configured",
-                color = Color.Gray,
-                fontSize = 12.sp
-            )
+            Spacer(Modifier.width(12.dp))
 
-            Spacer(Modifier.height(20.dp))
-
-            Row {
-                contacts.take(3).forEach {
-                    Chip(it)
-                    Spacer(Modifier.width(6.dp))
-                }
-                if (contacts.size > 3) {
-                    Chip("+${contacts.size - 3} more")
-                }
-            }
-        }
-
-        // CONFIG
-        DashboardCard(onEditConfig) {
-            Text("Trigger Configuration", fontWeight = FontWeight.Bold)
-
-            Spacer(Modifier.height(20.dp))
-
-            Text("Voice: \"$voicePhrase\"", color = Color.Gray, fontSize = 13.sp)
-            Text(
-                "Gesture: ${if (gestureType == "double-tap") "Back Tap (Double)" else "Device Shake"}",
-                color = Color.Gray,
-                fontSize = 13.sp
-            )
-        }
-
-        // HOW IT WORKS
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color(0xFF1E293B), Color(0xFF0F172A))
-                    ),
-                    RoundedCornerShape(16.dp)
-                )
-                .padding(16.dp)
-        ) {
-            Column {
-                Text("How Hybrid SOS Works", color = Color.White, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(20.dp))
-                Text("Online → internet alerts with GPS + audio", color = Color.LightGray, fontSize = 12.sp)
-                Text("Offline → calls first, SMS fallback", color = Color.LightGray, fontSize = 12.sp)
-                Text("No answer → transcript to everyone", color = Color.LightGray, fontSize = 12.sp)
-                Text("Auto route by connectivity", color = Color.LightGray, fontSize = 12.sp)
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
+                        ),
+                        CircleShape
+                    )
+                    .clickable { onLogout() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("👤")
             }
         }
     }
 }
+@Composable
+private fun SOSButton(onTriggerSOS: () -> Unit) {
+    var pressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (pressed) 0.96f else 1f)
 
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(scale)
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFFEF4444), Color(0xFFDC2626))
+                ),
+                RoundedCornerShape(24.dp)
+            )
+            .clickable {
+                pressed = true
+                onTriggerSOS()
+                pressed = false
+            }
+            .padding(vertical = 36.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("⚠️", fontSize = 40.sp)
+            Spacer(Modifier.height(18.dp))
+            Text("Trigger SOS", color = Color.White, fontWeight = FontWeight.Bold)
+            Text(
+                "Press to send emergency alert",
+                color = Color(0xFFFFCDD2),
+                fontSize = 12.sp
+            )
+        }
+    }
+}
+@Composable
+private fun ContactsSection(contacts: List<String>, onEditContacts: () -> Unit) {
+    DashboardCard(onEditContacts) {
+        Text("Emergency Contacts", fontWeight = FontWeight.Bold)
+        Text(
+            "${contacts.size} contact${if (contacts.size != 1) "s" else ""} configured",
+            color = Color.Gray,
+            fontSize = 12.sp
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        Row {
+            contacts.take(3).forEach {
+                Chip(it)
+                Spacer(Modifier.width(6.dp))
+            }
+            if (contacts.size > 3) {
+                Chip("+${contacts.size - 3} more")
+            }
+        }
+    }
+}
+@Composable
+private fun ConfigSection(
+    voicePhrase: String,
+    gestureType: String,
+    onEditConfig: () -> Unit
+) {
+    DashboardCard(onEditConfig) {
+        Text("Trigger Configuration", fontWeight = FontWeight.Bold)
+
+        Spacer(Modifier.height(20.dp))
+
+        Text("Voice: \"$voicePhrase\"", color = Color.Gray, fontSize = 13.sp)
+        Text(
+            "Gesture: ${if (gestureType == "double-tap") "Back Tap (Double)" else "Device Shake"}",
+            color = Color.Gray,
+            fontSize = 13.sp
+        )
+    }
+}
+@Composable
+private fun HybridInfoSection() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                ),
+                RoundedCornerShape(16.dp)
+            )
+            .padding(16.dp)
+    ) {
+        Column {
+            Text("How Hybrid SOS Works", color = Color.White, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(20.dp))
+            Text("Online → internet alerts with GPS + audio", color = Color.LightGray, fontSize = 12.sp)
+            Text("Offline → calls first, SMS fallback", color = Color.LightGray, fontSize = 12.sp)
+            Text("No answer → transcript to everyone", color = Color.LightGray, fontSize = 12.sp)
+            Text("Auto route by connectivity", color = Color.LightGray, fontSize = 12.sp)
+        }
+    }
+}
 @Composable
 private fun DashboardCard(
     onClick: () -> Unit,

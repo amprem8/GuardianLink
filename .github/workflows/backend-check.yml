@@ -28,18 +28,16 @@ jobs:
           path: server/build/libs/server-all-1.0.0.jar
 
 
-
   sonarqube:
     name: SonarQube Analysis
     runs-on: ubuntu-latest
-    # 🔑 Required for PR decoration
     permissions:
       contents: read
       pull-requests: write
+
     steps:
       - uses: actions/checkout@v4
         with:
-          # ✅ Needed for accurate analysis & PR decoration
           fetch-depth: 0
 
       - name: Set up JDK 17 for Sonar
@@ -62,19 +60,24 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle
 
-      # PR analysis (with explicit PR parameters) vs. push analysis
       - name: Build and analyze (PR)
         if: ${{ github.event_name == 'pull_request' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+          PR_KEY: ${{ github.event.pull_request.number }}
+          PR_BRANCH: ${{ github.head_ref }}
+          PR_BASE: ${{ github.base_ref }}
+
         run: |
           ./gradlew build sonar --info \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.organization=amprem8-1 \
-            -Dsonar.projectKey=amprem8_GuardianLink \
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
-            -Dsonar.pullrequest.branch=${{ github.head_ref }} \
-            -Dsonar.pullrequest.base=${{ github.base_ref }}
+            -Dsonar.host.url="https://sonarcloud.io" \
+            -Dsonar.organization="amprem8-1" \
+            -Dsonar.projectKey="amprem8_GuardianLink" \
+            -Dsonar.pullrequest.key="$PR_KEY" \
+            -Dsonar.pullrequest.branch="$PR_BRANCH" \
+            -Dsonar.pullrequest.base="$PR_BASE"
+
 
       - name: Build and analyze (push)
         if: ${{ github.event_name == 'push' }}
@@ -82,10 +85,10 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           ./gradlew build sonar --info \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.organization=amprem8 \
-            -Dsonar.projectKey=amprem8_GuardianLink
-  
+            -Dsonar.host.url="https://sonarcloud.io" \
+            -Dsonar.organization="amprem8-1" \
+            -Dsonar.projectKey="amprem8_GuardianLink"
+
 
   deploy:
     if: github.ref == 'refs/heads/main'
@@ -113,3 +116,4 @@ jobs:
           aws lambda update-function-code \
             --function-name guardianlink-api \
             --zip-file fileb://server-all-1.0.0.jar
+  ``
