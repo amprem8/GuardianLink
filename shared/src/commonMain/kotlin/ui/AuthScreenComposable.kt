@@ -108,7 +108,7 @@ fun AuthScreenComposable(
 
                 // 🟣 Create Account
                 Button(
-                    onClick = onLogin,
+                    onClick = onSignup,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(buttonHeight),

@@ -13,10 +13,9 @@ class AuthScreenActivity : Screen {
 
         AuthScreenComposable(
             onSignup = {
-               /*later*/
+                navigator?.push(SignupScreenActivity())
             },
             onLogin = {
-                navigator?.push(LoginScreenActivity())
             }
         )
     }

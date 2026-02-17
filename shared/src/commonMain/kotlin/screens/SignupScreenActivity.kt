@@ -2,11 +2,11 @@ package screens
 
 import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.core.screen.Screen
-import ui.LoginScreenComposable
+import ui.SignupScreen
 
-class LoginScreenActivity : Screen {
+class SignupScreenActivity : Screen {
     @Composable
     override fun Content() {
-        LoginScreenComposable()
+        SignupScreen()
     }
 }
