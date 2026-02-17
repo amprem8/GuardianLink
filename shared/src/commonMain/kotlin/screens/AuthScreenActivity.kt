@@ -3,7 +3,7 @@ package screens
 import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
-import ui.AuthScreenContent
+import ui.AuthScreenComposable
 
 class AuthScreenActivity : Screen {
 
@@ -11,10 +11,12 @@ class AuthScreenActivity : Screen {
     override fun Content() {
         val navigator = LocalNavigator.current
 
-        AuthScreenContent(
+        AuthScreenComposable(
             onSignup = {
-               /*later*/
+                navigator?.push(SignupScreenActivity())
             },
+            onLogin = {
+            }
         )
     }
 }
