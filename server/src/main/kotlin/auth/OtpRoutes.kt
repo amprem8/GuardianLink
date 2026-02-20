@@ -16,37 +16,68 @@ object OtpRoutes {
     data class VerifyOtpRequest(val phone: String, val otp: String)
 
     private fun normalizePhone(phone: String): String {
+        // If already in E.164 format (+91XXXXXXXXXX), return as-is
+        if (phone.startsWith("+91") && phone.length == 13) return phone
         val digits = phone.replace("\\D".toRegex(), "")
-        return "+91$digits"
+        // Handle case where digits already include country code (919345...)
+        return if (digits.startsWith("91") && digits.length == 12) "+$digits"
+        else "+91$digits"
     }
 
     fun sendOtp(event: APIGatewayV2HTTPEvent): APIGatewayV2HTTPResponse {
-        val req = json.decodeFromString<SendOtpRequest>(event.body ?: "{}")
+        return try {
+            val req = json.decodeFromString<SendOtpRequest>(event.body ?: "{}")
+            val phone = normalizePhone(req.phone)
 
-        OtpService.sendOtp(normalizePhone(req.phone))
+            if (phone.length < 13) { // +91 + 10 digits
+                return APIGatewayV2HTTPResponse.builder()
+                    .withStatusCode(400)
+                    .withHeaders(mapOf("Content-Type" to "application/json", "Access-Control-Allow-Origin" to "*"))
+                    .withBody("""{"code":"INVALID_PHONE","message":"Please enter a valid 10-digit phone number"}""")
+                    .build()
+            }
 
-        return ok("""{"success":true}""")
+            OtpService.sendOtp(phone)
+            ok("""{"success":true}""")
+        } catch (e: Exception) {
+            APIGatewayV2HTTPResponse.builder()
+                .withStatusCode(500)
+                .withHeaders(mapOf("Content-Type" to "application/json", "Access-Control-Allow-Origin" to "*"))
+                .withBody("""{"code":"SMS_FAILED","message":"Failed to send OTP. Please try again."}""")
+                .build()
+        }
     }
 
     fun verifyOtp(event: APIGatewayV2HTTPEvent): APIGatewayV2HTTPResponse {
-        val req = json.decodeFromString<VerifyOtpRequest>(event.body ?: "{}")
+        return try {
+            val req = json.decodeFromString<VerifyOtpRequest>(event.body ?: "{}")
 
-        if (!req.otp.matches(Regex("^\\d{6}$"))) {
-            return APIGatewayV2HTTPResponse.builder()
-                .withStatusCode(400)
-                .withHeaders(
-                    mapOf(
-                        "Content-Type" to "application/json",
-                        "Access-Control-Allow-Origin" to "*"
-                    )
-                )
-                .withBody("""{"error":"OTP must be 6 digits"}""")
+            if (!req.otp.matches(Regex("^\\d{6}$"))) {
+                return APIGatewayV2HTTPResponse.builder()
+                    .withStatusCode(400)
+                    .withHeaders(mapOf("Content-Type" to "application/json", "Access-Control-Allow-Origin" to "*"))
+                    .withBody("""{"code":"INVALID_OTP","message":"OTP must be 6 digits"}""")
+                    .build()
+            }
+
+            val valid = OtpService.verifyOtp(normalizePhone(req.phone), req.otp)
+
+            if (valid) {
+                ok("""{"success":true}""")
+            } else {
+                APIGatewayV2HTTPResponse.builder()
+                    .withStatusCode(401)
+                    .withHeaders(mapOf("Content-Type" to "application/json", "Access-Control-Allow-Origin" to "*"))
+                    .withBody("""{"code":"OTP_INVALID","message":"Invalid or expired OTP"}""")
+                    .build()
+            }
+        } catch (e: Exception) {
+            APIGatewayV2HTTPResponse.builder()
+                .withStatusCode(500)
+                .withHeaders(mapOf("Content-Type" to "application/json", "Access-Control-Allow-Origin" to "*"))
+                .withBody("""{"code":"VERIFY_FAILED","message":"Verification failed. Please try again."}""")
                 .build()
         }
-
-        val valid = OtpService.verifyOtp(normalizePhone(req.phone), req.otp)
-
-        return ok("""$valid""")   // <- IMPORTANT, client expects Boolean
     }
 
     private fun ok(body: String) =

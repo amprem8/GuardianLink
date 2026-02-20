@@ -1,8 +1,7 @@
 plugins {
     kotlin("multiplatform")
     id("com.android.library")
-    id("org.jetbrains.compose")
-    id("org.jetbrains.kotlin.plugin.compose")
+    kotlin("plugin.serialization") version "2.1.0"
 }
 
 kotlin {
@@ -15,37 +14,45 @@ kotlin {
         }
     }
 
+    // JVM target for server
+    jvm()
+
     iosX64()
     iosArm64()
     iosSimulatorArm64()
-
-    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>()
-        .configureEach {
-            binaries.framework {
-                baseName = "Shared"
-                isStatic = false
-            }
-        }
 
     sourceSets {
 
         val commonMain by getting {
             dependencies {
-                implementation(project(":shared-core"))
-                implementation(compose.runtime)
-                implementation(compose.foundation)
-                implementation(compose.material3)
-                implementation(compose.ui)
-
-                implementation(compose.materialIconsExtended)
-
-                implementation(compose.components.resources)
-
-                // Navigation
-                implementation(libs.voyager.navigator)
-                implementation(libs.voyager.screenmodel)
-
+                implementation(libs.ktor.client.core)
+                implementation("io.ktor:ktor-client-content-negotiation:3.0.1")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.1")
+                implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.coroutines.core)
+            }
+        }
+
+        val iosMain by creating {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(libs.ktor.client.darwin)
+            }
+        }
+
+        val iosX64Main by getting { dependsOn(iosMain) }
+        val iosArm64Main by getting { dependsOn(iosMain) }
+        val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
+
+        val androidMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.okhttp)
+            }
+        }
+
+        val jvmMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.cio)
             }
         }
     }
@@ -59,15 +66,8 @@ android {
         minSdk = 24
     }
 
-    buildFeatures {
-        compose = true
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-}
-compose.resources {
-    publicResClass = true
 }

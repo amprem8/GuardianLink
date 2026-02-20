@@ -38,7 +38,7 @@ tasks.register<Jar>("fatJar") {
 }
 
 dependencies {
-    implementation(project(":shared-core"))
+    implementation(project(":shared"))
     implementation(libs.logback)
     implementation(libs.ktor.serverCore)
     implementation(libs.aws.lambda.java.core)
