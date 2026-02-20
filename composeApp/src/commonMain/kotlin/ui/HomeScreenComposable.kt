@@ -1,17 +1,30 @@
 package ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -43,51 +56,86 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF8FAFC))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
-        HomeHeader(state.userName, state.isOnline, actions.onLogout)
+        HomeHeader(
+            userName = state.userName,
+            phoneNumber = state.phoneNumber,
+            isOnline = state.isOnline,
+            onEditConfig = actions.onEditConfig,
+            onLogout = actions.onLogout
+        )
         SOSButton(actions.onTriggerSOS)
         ContactsSection(state.contacts, actions.onEditContacts)
         ConfigSection(state.voicePhrase, state.gestureType, actions.onEditConfig)
         HybridInfoSection()
-
+        Spacer(Modifier.height(8.dp))
     }
 }
+
+// ── Header ──────────────────────────────────────────────────
+
 @Composable
-private fun HomeHeader(userName: String, isOnline: Boolean, onLogout: () -> Unit) {
+private fun HomeHeader(
+    userName: String,
+    phoneNumber: String,
+    isOnline: Boolean,
+    onEditConfig: () -> Unit,
+    onLogout: () -> Unit
+) {
     var showProfileMenu by remember { mutableStateOf(false) }
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Text("SOS Guardian", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Text("Always ready to help", color = Color.Gray, fontSize = 14.sp)
+            Text(
+                "SOS Guardian",
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                color = Color(0xFF111827)
+            )
+            Text("Always ready to help", color = Color(0xFF6B7280), fontSize = 14.sp)
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Status chip
             if (isOnline) {
-                StatusChip("Online", Color(0xFFDCFCE7), Color(0xFF15803D))
+                StatusChip(
+                    icon = "📶",
+                    text = "Online",
+                    bg = Color(0xFFDCFCE7),
+                    fg = Color(0xFF15803D)
+                )
             } else {
-                StatusChip("SMS Mode", Color(0xFFFEF3C7), Color(0xFF92400E))
+                StatusChip(
+                    icon = "💬",
+                    text = "SMS Mode",
+                    bg = Color(0xFFFEF3C7),
+                    fg = Color(0xFF92400E)
+                )
             }
 
-            Spacer(Modifier.width(12.dp))
-
+            // Profile button + menu
             Box {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
+                        .shadow(
+                            elevation = if (showProfileMenu) 8.dp else 0.dp,
+                            shape = CircleShape
+                        )
                         .background(
                             Brush.linearGradient(
                                 listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
                             ),
                             CircleShape
                         )
+                        .clip(CircleShape)
                         .clickable { showProfileMenu = !showProfileMenu },
                     contentAlignment = Alignment.Center
                 ) {
@@ -99,65 +147,208 @@ private fun HomeHeader(userName: String, isOnline: Boolean, onLogout: () -> Unit
                     )
                 }
 
-                // Profile dropdown
-                if (showProfileMenu) {
+                DropdownMenu(
+                    expanded = showProfileMenu,
+                    onDismissRequest = { showProfileMenu = false },
+                    modifier = Modifier
+                        .width(260.dp)
+                        .background(Color.White)
+                ) {
+                    // Gradient header with user info
                     Box(
                         modifier = Modifier
-                            .offset(x = (-100).dp, y = 44.dp)
-                            .background(Color.White, RoundedCornerShape(12.dp))
-                            .width(160.dp)
+                            .fillMaxWidth()
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
+                                )
+                            )
+                            .padding(16.dp)
                     ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            // Username as first item
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .background(Color(0xFFE0E7FF), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        userName.firstOrNull()?.uppercase() ?: "?",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF2563EB)
-                                    )
-                                }
-                                Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = userName.ifEmpty { "User" },
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 16.sp
+                            )
+                            if (phoneNumber.isNotEmpty()) {
                                 Text(
-                                    text = userName.ifEmpty { "User" },
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp
+                                    text = phoneNumber,
+                                    color = Color(0xFFBFDBFE),
+                                    fontSize = 13.sp
                                 )
                             }
+                        }
+                    }
 
-                            // Divider
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp)
-                                    .height(1.dp)
-                                    .background(Color(0xFFE5E7EB))
-                            )
+                    // Settings
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text("⚙️", fontSize = 18.sp)
+                                Text("Settings", color = Color(0xFF374151), fontSize = 15.sp)
+                            }
+                        },
+                        onClick = {
+                            showProfileMenu = false
+                            onEditConfig()
+                        },
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
 
-                            // Logout
-                            Text(
-                                text = "Logout",
-                                color = Color(0xFFEF4444),
-                                fontSize = 14.sp,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        showProfileMenu = false
-                                        onLogout()
-                                    }
-                                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                            )
+                    // Sign Out
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text("🚪", fontSize = 18.sp)
+                                Text("Sign Out", color = Color(0xFFDC2626), fontSize = 15.sp)
+                            }
+                        },
+                        onClick = {
+                            showProfileMenu = false
+                            onLogout()
+                        },
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── SOS Button ──────────────────────────────────────────────
+
+@Composable
+private fun SOSButton(onTriggerSOS: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = tween(150)
+    )
+
+    // Pulsing glow for the inner circle
+    val infiniteTransition = rememberInfiniteTransition()
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.92f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(scale)
+            .shadow(12.dp, RoundedCornerShape(24.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFFEF4444), Color(0xFFDC2626))
+                ),
+                RoundedCornerShape(24.dp)
+            )
+            .clip(RoundedCornerShape(24.dp))
+            .clickable(interactionSource = interactionSource, indication = null) {
+                onTriggerSOS()
+            }
+            .padding(vertical = 28.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Pulsing circle
+            Box(contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(96.dp)
+                        .scale(pulseScale)
+                        .background(
+                            Color.White.copy(alpha = pulseAlpha),
+                            CircleShape
+                        )
+                )
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("⚠️", fontSize = 36.sp)
+                }
+            }
+
+            Text(
+                "Trigger SOS",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp
+            )
+            Text(
+                "Press to send emergency alert",
+                color = Color(0xFFFFCDD2),
+                fontSize = 14.sp
+            )
+        }
+    }
+}
+
+// ── Contacts card ───────────────────────────────────────────
+
+@Composable
+private fun ContactsSection(contacts: List<String>, onEditContacts: () -> Unit) {
+    DashboardCard(onClick = onEditContacts) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Icon
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color(0xFFDBEAFE), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("👥", fontSize = 22.sp)
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Emergency Contacts",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = Color(0xFF111827)
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "${contacts.size} contact${if (contacts.size != 1) "s" else ""} configured",
+                    color = Color(0xFF6B7280),
+                    fontSize = 13.sp
+                )
+
+                if (contacts.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        contacts.take(3).forEach {
+                            Chip(it, Color(0xFFEFF6FF), Color(0xFF1D4ED8))
+                        }
+                        if (contacts.size > 3) {
+                            Chip("+${contacts.size - 3} more", Color(0xFFF3F4F6), Color(0xFF4B5563))
                         }
                     }
                 }
@@ -165,106 +356,156 @@ private fun HomeHeader(userName: String, isOnline: Boolean, onLogout: () -> Unit
         }
     }
 }
-@Composable
-private fun SOSButton(onTriggerSOS: () -> Unit) {
-    var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) 0.96f else 1f)
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .scale(scale)
-            .background(
-                Brush.linearGradient(
-                    listOf(Color(0xFFEF4444), Color(0xFFDC2626))
-                ),
-                RoundedCornerShape(24.dp)
-            )
-            .clickable {
-                pressed = true
-                onTriggerSOS()
-                pressed = false
-            }
-            .padding(vertical = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("⚠️", fontSize = 24.sp)
-            Spacer(Modifier.height(6.dp))
-            Text("Trigger SOS", color = Color.White, fontWeight = FontWeight.Bold)
-            Text(
-                "Press to send emergency alert",
-                color = Color(0xFFFFCDD2),
-                fontSize = 12.sp
-            )
-        }
-    }
-}
-@Composable
-private fun ContactsSection(contacts: List<String>, onEditContacts: () -> Unit) {
-    DashboardCard(onEditContacts) {
-        Text("Emergency Contacts", fontWeight = FontWeight.Bold)
-        Text(
-            "${contacts.size} contact${if (contacts.size != 1) "s" else ""} configured",
-            color = Color.Gray,
-            fontSize = 12.sp
-        )
+// ── Config card ─────────────────────────────────────────────
 
-        Spacer(Modifier.height(6.dp))
-
-        Row {
-            contacts.take(3).forEach {
-                Chip(it)
-                Spacer(Modifier.width(6.dp))
-            }
-            if (contacts.size > 3) {
-                Chip("+${contacts.size - 3} more")
-            }
-        }
-    }
-}
 @Composable
 private fun ConfigSection(
     voicePhrase: String,
     gestureType: String,
     onEditConfig: () -> Unit
 ) {
-    DashboardCard(onEditConfig) {
-        Text("Trigger Configuration", fontWeight = FontWeight.Bold)
+    DashboardCard(onClick = onEditConfig) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color(0xFFF3E8FF), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("⚙️", fontSize = 22.sp)
+            }
 
-        Spacer(Modifier.height(6.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Trigger Configuration",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = Color(0xFF111827)
+                )
 
-        Text("Voice: \"$voicePhrase\"", color = Color.Gray, fontSize = 13.sp)
-        Text(
-            "Gesture: ${if (gestureType == "double-tap") "Back Tap (Double)" else "Device Shake"}",
-            color = Color.Gray,
-            fontSize = 13.sp
-        )
+                Spacer(Modifier.height(10.dp))
+
+                // Voice row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(Color(0xFF7C3AED), CircleShape)
+                    )
+                    Text(
+                        "Voice: \"$voicePhrase\"",
+                        color = Color(0xFF6B7280),
+                        fontSize = 14.sp
+                    )
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                // Gesture row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(Color(0xFF7C3AED), CircleShape)
+                    )
+                    Text(
+                        "Gesture: ${if (gestureType == "double-tap") "Back Tap (Double)" else "Device Shake"}",
+                        color = Color(0xFF6B7280),
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
     }
 }
+
+// ── How Hybrid SOS Works ────────────────────────────────────
+
 @Composable
 private fun HybridInfoSection() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(16.dp))
             .background(
                 Brush.linearGradient(
                     listOf(Color(0xFF1E293B), Color(0xFF0F172A))
                 ),
                 RoundedCornerShape(16.dp)
             )
-            .padding(12.dp)
+            .padding(20.dp)
     ) {
-        Column {
-            Text("How Hybrid SOS Works", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Spacer(Modifier.height(6.dp))
-            Text("Online → internet alerts with GPS + audio", color = Color.LightGray, fontSize = 11.sp)
-            Text("Offline → calls first, SMS fallback", color = Color.LightGray, fontSize = 11.sp)
-            Text("No answer → transcript to everyone", color = Color.LightGray, fontSize = 11.sp)
-            Text("Auto route by connectivity", color = Color.LightGray, fontSize = 11.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            // Shield icon
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("🛡️", fontSize = 22.sp)
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "How Hybrid SOS Works",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Spacer(Modifier.height(12.dp))
+
+                HybridInfoItem(
+                    checkColor = Color(0xFF4ADE80),
+                    label = "Online:",
+                    detail = "Instant alerts via internet to all contacts with GPS location and audio clip"
+                )
+                Spacer(Modifier.height(8.dp))
+                HybridInfoItem(
+                    checkColor = Color(0xFFFBBF24),
+                    label = "Offline (Calls First):",
+                    detail = "Calls emergency contacts; if someone answers, sends GPS via SMS to them only"
+                )
+                Spacer(Modifier.height(8.dp))
+                HybridInfoItem(
+                    checkColor = Color(0xFF60A5FA),
+                    label = "No Answer:",
+                    detail = "Converts audio to text and sends SMS with GPS + transcript to all contacts"
+                )
+                Spacer(Modifier.height(8.dp))
+                HybridInfoItem(
+                    checkColor = Color(0xFFC084FC),
+                    label = "Smart Routing:",
+                    detail = "Automatically switches between internet and cellular based on connectivity"
+                )
+            }
         }
     }
 }
+
+@Composable
+private fun HybridInfoItem(checkColor: Color, label: String, detail: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("✓", color = checkColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Column {
+            Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(detail, color = Color(0xFFCBD5E1), fontSize = 12.sp, lineHeight = 16.sp)
+        }
+    }
+}
+
+// ── Shared components ───────────────────────────────────────
+
 @Composable
 private fun DashboardCard(
     onClick: () -> Unit,
@@ -273,31 +514,36 @@ private fun DashboardCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(2.dp, RoundedCornerShape(16.dp))
             .background(Color.White, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() }
-            .padding(12.dp),
+            .padding(20.dp),
         content = content
     )
 }
 
 @Composable
-private fun StatusChip(text: String, bg: Color, fg: Color) {
-    Box(
+private fun StatusChip(icon: String, text: String, bg: Color, fg: Color) {
+    Row(
         modifier = Modifier
             .background(bg, RoundedCornerShape(50))
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text(text, color = fg, fontSize = 12.sp)
+        Text(icon, fontSize = 14.sp)
+        Text(text, color = fg, fontSize = 12.sp, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
-private fun Chip(text: String) {
+private fun Chip(text: String, bg: Color = Color(0xFFEFF6FF), fg: Color = Color(0xFF1D4ED8)) {
     Box(
         modifier = Modifier
-            .background(Color(0xFFE0E7FF), RoundedCornerShape(50))
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .background(bg, RoundedCornerShape(50))
+            .padding(horizontal = 12.dp, vertical = 4.dp)
     ) {
-        Text(text, fontSize = 12.sp)
+        Text(text, fontSize = 12.sp, color = fg)
     }
 }

@@ -97,6 +97,21 @@ fun OtpScreenOtpEntryPreview() {
     )
 }
 
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun OtpScreenVerifyingPreview() {
+    SetupOtpScreen(
+        uiState = OtpUiState.Verifying,
+        phone = "+91 9345771470",
+        otp = "482916",
+        onPhoneChange = {},
+        onOtpChange = {},
+        onSendOtp = {},
+        onVerifyOtp = {},
+        onErrorDismiss = {}
+    )
+}
+
 // ── Home ──
 
 @Preview(showBackground = true, showSystemUi = true)

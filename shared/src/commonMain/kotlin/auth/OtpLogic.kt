@@ -52,7 +52,7 @@ class OtpLogic(private val authApi: AuthApi) {
     }
 
     fun verifyOtp() {
-        _uiState.value = OtpUiState.Loading
+        _uiState.value = OtpUiState.Verifying
 
         scope.launch {
             authApi.verifyOtp(normalizePhone(phone.value), otp.value)

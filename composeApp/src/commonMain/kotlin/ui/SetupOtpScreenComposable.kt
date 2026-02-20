@@ -174,7 +174,7 @@ fun SetupOtpScreen(
                         }
                     }
 
-                    OtpUiState.OtpEntry -> {
+                    OtpUiState.OtpEntry, OtpUiState.Verifying -> {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 "Enter OTP",
@@ -189,6 +189,7 @@ fun SetupOtpScreen(
                                 singleLine = true,
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.fillMaxWidth(),
+                                enabled = uiState !is OtpUiState.Verifying,
                                 textStyle = LocalTextStyle.current.copy(
                                     textAlign = TextAlign.Center,
                                     letterSpacing = 8.sp,
@@ -209,14 +210,21 @@ fun SetupOtpScreen(
                         Button(
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             onClick = onVerifyOtp,
+                            enabled = uiState !is OtpUiState.Verifying,
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = OtpColors.Primary)
                         ) {
-                            Text("Verify OTP", fontWeight = FontWeight.SemiBold)
+                            if (uiState is OtpUiState.Verifying) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                            } else {
+                                Text("Verify OTP", fontWeight = FontWeight.SemiBold)
+                            }
                         }
 
-                        TextButton(onClick = onErrorDismiss) {
-                            Text("Change Number", color = OtpColors.Primary)
+                        if (uiState !is OtpUiState.Verifying) {
+                            TextButton(onClick = onErrorDismiss) {
+                                Text("Change Number", color = OtpColors.Primary)
+                            }
                         }
                     }
                     else -> {}
