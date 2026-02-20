@@ -3,6 +3,7 @@ package ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,17 +20,18 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,15 +41,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 
 @Composable
-fun SignupScreen() {
+fun SignupScreen(
+    isLoading: Boolean,
+    error: String,
+    onSignup: (name: String, email: String, password: String, confirmPassword: String, agreeToTerms: Boolean) -> Unit,
+    onDismissError: () -> Unit
+) {
 
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -58,43 +66,8 @@ fun SignupScreen() {
     var showConfirmPassword by remember { mutableStateOf(false) }
 
     var agreeToTerms by remember { mutableStateOf(false) }
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf("") }
 
-    suspend fun simulateNetworkDelay() {
-        delay(1500)
-    }
-
-    fun validate(): Boolean {
-        error = ""
-
-        if (name.isBlank() || email.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
-            error = "Please fill in all fields"
-            return false
-        }
-
-        if (!email.contains("@")) {
-            error = "Please enter a valid email"
-            return false
-        }
-
-        if (password.length < 8) {
-            error = "Password must be at least 8 characters"
-            return false
-        }
-
-        if (password != confirmPassword) {
-            error = "Passwords do not match"
-            return false
-        }
-
-        if (!agreeToTerms) {
-            error = "Please accept the terms and conditions"
-            return false
-        }
-
-        return true
-    }
+    val focusManager = LocalFocusManager.current
 
     Box(
         modifier = Modifier
@@ -104,27 +77,30 @@ fun SignupScreen() {
                     listOf(Color(0xFFF8FAFC), Color(0xFFE0F2FE))
                 )
             )
-            .padding(16.dp),
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) { focusManager.clearFocus() }
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
 
         Column(
             modifier = Modifier
                 .widthIn(max = 420.dp)
-                .fillMaxWidth()
-                .align(Alignment.Center),
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
             // HEADER
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(bottom = 20.dp, top = 20.dp)
+                modifier = Modifier.padding(bottom = 6.dp, top = 3.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
-                        .shadow(12.dp, CircleShape)
+                        .size(52.dp)
+                        .shadow(6.dp, CircleShape)
                         .background(
                             Brush.linearGradient(
                                 listOf(
@@ -136,20 +112,21 @@ fun SignupScreen() {
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("🛡️", fontSize = 28.sp, color = Color.White)
+                    Text("🛡️", fontSize = 24.sp, color = Color.White)
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(6.dp))
 
                 Text(
                     "Create Account",
-                    fontSize = 22.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Medium
                 )
 
                 Text(
                     "Join GuardianLink for safer living",
-                    color = Color.Gray
+                    color = Color.Gray,
+                    fontSize = 12.sp
                 )
             }
 
@@ -158,8 +135,8 @@ fun SignupScreen() {
                 modifier = Modifier
                     .shadow(16.dp, RoundedCornerShape(24.dp))
                     .background(Color.White, RoundedCornerShape(24.dp))
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
 
                 if (error.isNotEmpty()) {
@@ -169,6 +146,7 @@ fun SignupScreen() {
                             .background(Color(0xFFFFF1F2), RoundedCornerShape(12.dp))
                             .border(1.dp, Color(0xFFFECACA), RoundedCornerShape(12.dp))
                             .padding(12.dp)
+                            .clickable { onDismissError() }
                     ) {
                         Text(error, color = Color(0xFFB91C1C))
                     }
@@ -176,12 +154,14 @@ fun SignupScreen() {
 
                 LabeledInput(
                     label = "Full Name",
-                    value = name
+                    value = name,
+                    icon = Icons.Outlined.Person
                 ) { name = it }
 
                 LabeledInput(
                     label = "Email Address",
-                    value = email
+                    value = email,
+                    icon = Icons.Outlined.Email
                 ) { email = it }
 
                 PasswordInput(
@@ -199,22 +179,23 @@ fun SignupScreen() {
                     onValueChange = { confirmPassword = it },
                     onToggle = { showConfirmPassword = !showConfirmPassword }
                 )
+                Spacer(Modifier.height(6.dp))
 
                 TermsSection(
                     checked = agreeToTerms,
                     onCheckedChange = { agreeToTerms = it }
                 )
 
+                Spacer(Modifier.height(6.dp))
+
                 Button(
                     onClick = {
-                        if (validate()) {
-                            loading = true
-                        }
+                        onSignup(name, email, password, confirmPassword, agreeToTerms)
                     },
-                    enabled = !loading,
+                    enabled = !isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
+                        .height(40.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                     contentPadding = PaddingValues(0.dp)
@@ -233,52 +214,44 @@ fun SignupScreen() {
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            if (loading) "Creating Account..." else "Create Account",
-                            color = Color.White
-                        )
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Text("Create Account", color = Color.White)
+                        }
                     }
                 }
 
                 DividerSection()
 
                 OutlinedButton(
-                    onClick = { loading = true },
-                    enabled = !loading,
+                    onClick = { },
+                    enabled = !isLoading,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Sign in with Comcast SSO")
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
 
             Row(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Already have an account? ")
+                Text("Already have an account? ", fontSize = 12.sp)
                 Text(
                     "Sign in",
                     color = Color(0xFF2563EB),
+                    fontSize = 12.sp,
                     modifier = Modifier.clickable { }
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
-
-            Text(
-                "Protected by end-to-end encryption",
-                color = Color.Gray,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-        }
-    }
-
-    if (loading) {
-        LaunchedEffect(Unit) {
-            simulateNetworkDelay()
-            loading = false
+            Spacer(Modifier.height(4.dp))
         }
     }
 }
@@ -286,17 +259,18 @@ fun SignupScreen() {
 fun LabeledInput(
     label: String,
     value: String,
+    icon: ImageVector = Icons.Outlined.Person,
     onChange: (String) -> Unit
 ) {
     Column {
-        Text(label, color = Color.Gray)
-        Spacer(Modifier.height(6.dp))
+        Text(label, color = Color.Gray, fontSize = 12.sp)
+        Spacer(Modifier.height(2.dp))
 
         OutlinedTextField(
             value = value,
             onValueChange = onChange,
             singleLine = true,
-            leadingIcon = {Icon(Icons.Outlined.Person, contentDescription = null)},
+            leadingIcon = { Icon(icon, contentDescription = null) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         )
@@ -313,12 +287,18 @@ fun PasswordInput(
     onToggle: () -> Unit
 ) {
     Column {
-        Text(label, color = Color.Gray)
-        Spacer(Modifier.height(6.dp))
+        Text(label, color = Color.Gray, fontSize = 12.sp)
+        Spacer(Modifier.height(2.dp))
 
         OutlinedTextField(
             value = value,
-            onValueChange = onValueChange,
+            onValueChange = { newValue ->
+                // Block paste: only allow single-char additions or deletions
+                val diff = newValue.length - value.length
+                if (diff <= 1) {
+                    onValueChange(newValue)
+                }
+            },
             singleLine = true,
             visualTransformation =
                 if (visible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -347,18 +327,18 @@ fun TermsSection(
         modifier = Modifier
             .background(Color(0xFFFFFBEB), RoundedCornerShape(12.dp))
             .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(12.dp))
-            .padding(12.dp)
+            .padding(6.dp)
     ) {
-        Row(verticalAlignment = Alignment.Top) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
                 checked = checked,
-                onCheckedChange = onCheckedChange
+                onCheckedChange = onCheckedChange,
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
             Text(
-                "I agree to the Terms of Service and Privacy Policy. " +
-                        "I understand this app is for emergency use and my data will be used to facilitate SOS alerts.",
-                fontSize = 13.sp
+                "I agree to the Terms of Service and Privacy Policy.",
+                fontSize = 11.sp
             )
         }
     }
@@ -384,4 +364,3 @@ fun DividerSection() {
         )
     }
 }
-

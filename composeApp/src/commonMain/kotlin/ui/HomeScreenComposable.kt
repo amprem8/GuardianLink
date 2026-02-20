@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -42,12 +43,11 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF8FAFC))
-            .padding(horizontal = 16.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(45.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Spacer(Modifier.width(3.dp))
 
-        HomeHeader(state.isOnline, actions.onLogout)
+        HomeHeader(state.userName, state.isOnline, actions.onLogout)
         SOSButton(actions.onTriggerSOS)
         ContactsSection(state.contacts, actions.onEditContacts)
         ConfigSection(state.voicePhrase, state.gestureType, actions.onEditConfig)
@@ -56,7 +56,9 @@ fun HomeScreen(
     }
 }
 @Composable
-private fun HomeHeader(isOnline: Boolean, onLogout: () -> Unit) {
+private fun HomeHeader(userName: String, isOnline: Boolean, onLogout: () -> Unit) {
+    var showProfileMenu by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -76,19 +78,89 @@ private fun HomeHeader(isOnline: Boolean, onLogout: () -> Unit) {
 
             Spacer(Modifier.width(12.dp))
 
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
-                        ),
-                        CircleShape
+            Box {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
+                            ),
+                            CircleShape
+                        )
+                        .clickable { showProfileMenu = !showProfileMenu },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = userName.firstOrNull()?.uppercase() ?: "👤",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
                     )
-                    .clickable { onLogout() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("👤")
+                }
+
+                // Profile dropdown
+                if (showProfileMenu) {
+                    Box(
+                        modifier = Modifier
+                            .offset(x = (-100).dp, y = 44.dp)
+                            .background(Color.White, RoundedCornerShape(12.dp))
+                            .width(160.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            // Username as first item
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(Color(0xFFE0E7FF), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        userName.firstOrNull()?.uppercase() ?: "?",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF2563EB)
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = userName.ifEmpty { "User" },
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp
+                                )
+                            }
+
+                            // Divider
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp)
+                                    .height(1.dp)
+                                    .background(Color(0xFFE5E7EB))
+                            )
+
+                            // Logout
+                            Text(
+                                text = "Logout",
+                                color = Color(0xFFEF4444),
+                                fontSize = 14.sp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showProfileMenu = false
+                                        onLogout()
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -113,12 +185,12 @@ private fun SOSButton(onTriggerSOS: () -> Unit) {
                 onTriggerSOS()
                 pressed = false
             }
-            .padding(vertical = 36.dp),
+            .padding(vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("⚠️", fontSize = 40.sp)
-            Spacer(Modifier.height(18.dp))
+            Text("⚠️", fontSize = 24.sp)
+            Spacer(Modifier.height(6.dp))
             Text("Trigger SOS", color = Color.White, fontWeight = FontWeight.Bold)
             Text(
                 "Press to send emergency alert",
@@ -138,7 +210,7 @@ private fun ContactsSection(contacts: List<String>, onEditContacts: () -> Unit) 
             fontSize = 12.sp
         )
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(6.dp))
 
         Row {
             contacts.take(3).forEach {
@@ -160,7 +232,7 @@ private fun ConfigSection(
     DashboardCard(onEditConfig) {
         Text("Trigger Configuration", fontWeight = FontWeight.Bold)
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(6.dp))
 
         Text("Voice: \"$voicePhrase\"", color = Color.Gray, fontSize = 13.sp)
         Text(
@@ -181,15 +253,15 @@ private fun HybridInfoSection() {
                 ),
                 RoundedCornerShape(16.dp)
             )
-            .padding(16.dp)
+            .padding(12.dp)
     ) {
         Column {
-            Text("How Hybrid SOS Works", color = Color.White, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(20.dp))
-            Text("Online → internet alerts with GPS + audio", color = Color.LightGray, fontSize = 12.sp)
-            Text("Offline → calls first, SMS fallback", color = Color.LightGray, fontSize = 12.sp)
-            Text("No answer → transcript to everyone", color = Color.LightGray, fontSize = 12.sp)
-            Text("Auto route by connectivity", color = Color.LightGray, fontSize = 12.sp)
+            Text("How Hybrid SOS Works", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Spacer(Modifier.height(6.dp))
+            Text("Online → internet alerts with GPS + audio", color = Color.LightGray, fontSize = 11.sp)
+            Text("Offline → calls first, SMS fallback", color = Color.LightGray, fontSize = 11.sp)
+            Text("No answer → transcript to everyone", color = Color.LightGray, fontSize = 11.sp)
+            Text("Auto route by connectivity", color = Color.LightGray, fontSize = 11.sp)
         }
     }
 }
@@ -203,7 +275,7 @@ private fun DashboardCard(
             .fillMaxWidth()
             .background(Color.White, RoundedCornerShape(16.dp))
             .clickable { onClick() }
-            .padding(16.dp),
+            .padding(12.dp),
         content = content
     )
 }

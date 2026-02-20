@@ -17,21 +17,21 @@ class AuthApi {
     private val client = createHttpClient()
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun signup(req: SignupRequest): AuthResponse {
+    suspend fun signup(req: SignupRequest): Result<AuthResponse> = runCatching {
         val response = client.post("${AppConfig.BASE_URL}/signup") {
             contentType(ContentType.Application.Json)
             setBody(req)
         }
-        if (response.status.isSuccess()) return response.body()
+        if (response.status.isSuccess()) response.body<AuthResponse>()
         else throw parseError(response)
     }
 
-    suspend fun login(req: LoginRequest): AuthResponse {
+    suspend fun login(req: LoginRequest): Result<AuthResponse> = runCatching {
         val response = client.post("${AppConfig.BASE_URL}/login") {
             contentType(ContentType.Application.Json)
             setBody(req)
         }
-        if (response.status.isSuccess()) return response.body()
+        if (response.status.isSuccess()) response.body<AuthResponse>()
         else throw parseError(response)
     }
 

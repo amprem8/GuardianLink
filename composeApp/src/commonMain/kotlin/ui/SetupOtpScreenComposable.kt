@@ -224,7 +224,9 @@ fun SetupOtpScreen(
             }
         }
     }
-}@Composable
+}
+
+@Composable
 fun ErrorBanner(message: String, onDismiss: () -> Unit) {
     Box(
         modifier = Modifier
