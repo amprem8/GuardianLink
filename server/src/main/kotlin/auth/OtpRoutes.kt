@@ -16,8 +16,12 @@ object OtpRoutes {
     data class VerifyOtpRequest(val phone: String, val otp: String)
 
     private fun normalizePhone(phone: String): String {
+        // If already in E.164 format (+91XXXXXXXXXX), return as-is
+        if (phone.startsWith("+91") && phone.length == 13) return phone
         val digits = phone.replace("\\D".toRegex(), "")
-        return "+91$digits"
+        // Handle case where digits already include country code (919345...)
+        return if (digits.startsWith("91") && digits.length == 12) "+$digits"
+        else "+91$digits"
     }
 
     fun sendOtp(event: APIGatewayV2HTTPEvent): APIGatewayV2HTTPResponse {
