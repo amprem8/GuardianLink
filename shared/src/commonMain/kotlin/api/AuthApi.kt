@@ -43,14 +43,13 @@ class AuthApi {
         if (!response.status.isSuccess()) throw parseError(response)
     }
 
-    suspend fun verifyOtp(phone: String, otp: String): Result<Boolean> = runCatching {
+    suspend fun verifyOtp(phone: String, otp: String): Result<Unit> = runCatching {
         val response = client.post("${AppConfig.BASE_URL}/otp/verify") {
             contentType(ContentType.Application.Json)
             setBody(VerifyOtpRequest(phone, otp))
         }
 
-        if (response.status.isSuccess()) response.body<Boolean>()
-        else throw parseError(response)
+        if (!response.status.isSuccess()) throw parseError(response)
     }
 
 

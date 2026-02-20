@@ -56,11 +56,8 @@ class OtpLogic(private val authApi: AuthApi) {
 
         scope.launch {
             authApi.verifyOtp(normalizePhone(phone.value), otp.value)
-                .onSuccess {
-                    if (it) _uiState.value = OtpUiState.Success
-                    else _uiState.value = OtpUiState.Error("Invalid OTP")
-                }
-                .onFailure { _uiState.value = OtpUiState.Error(it.message?:"Unknown") }
+                .onSuccess { _uiState.value = OtpUiState.Success }
+                .onFailure { _uiState.value = OtpUiState.Error(extract(it)) }
         }
     }
 
