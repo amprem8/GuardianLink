@@ -10,6 +10,8 @@ import auth.OtpLogic
 import auth.OtpUiState
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
+import session.UserSession
+import storage.AppStorage
 import ui.SetupOtpScreen
 
 class OtpScreenActivity : Screen {
@@ -24,10 +26,18 @@ class OtpScreenActivity : Screen {
         // Navigate to Home only when OTP API returns success (200)
         LaunchedEffect(uiState) {
             if (uiState is OtpUiState.Success) {
+                // Persist registration FIRST (synchronous commit on Android)
+                // so even an immediate process kill won't lose the flag
+                val name  = UserSession.userName.ifEmpty { "User" }
+                val email = UserSession.userEmail
+                AppStorage.markRegistered(
+                    userName    = name,
+                    userEmail   = email,
+                    phoneNumber = phone,
+                )
                 navigator?.replace(HomeScreenActivity())
             }
         }
-
 
         SetupOtpScreen(
             uiState = uiState,

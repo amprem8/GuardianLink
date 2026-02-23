@@ -2,7 +2,9 @@ package screens
 
 import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
 import session.UserSession
+import storage.AppStorage
 import ui.HomeScreen
 import ui.HomeUiState
 import ui.HomeActions
@@ -11,9 +13,16 @@ class HomeScreenActivity : Screen {
 
     @Composable
     override fun Content() {
+        val navigator = LocalNavigator.current
+
+        // Use in-memory session if available, otherwise fall back to persisted data
+        val userName = UserSession.userName.ifEmpty { AppStorage.getUserName() }
+        val userEmail = UserSession.userEmail.ifEmpty { AppStorage.getUserEmail() }
+        val phoneNumber = AppStorage.getPhoneNumber()
+
         val state = HomeUiState(
-            userName = UserSession.userName,
-            phoneNumber = "",
+            userName = userName,
+            phoneNumber = phoneNumber,
             contacts = emptyList(),
             voicePhrase = "",
             gestureType = "",
@@ -24,7 +33,12 @@ class HomeScreenActivity : Screen {
             onTriggerSOS = {},
             onEditContacts = {},
             onEditConfig = {},
-            onLogout = {}
+            onLogout = {
+                // Clear persisted registration + in-memory session
+                AppStorage.clear()
+                UserSession.logout()
+                navigator?.replaceAll(AuthScreenActivity())
+            }
         )
 
         HomeScreen(

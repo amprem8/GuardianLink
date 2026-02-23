@@ -102,7 +102,7 @@ object OtpService {
     }
 
     private fun sendSms(phone: String, otp: String) {
-        val message = "Your GuardianLink verification code is $otp. Valid for 5 minutes."
+        val message = "Your ResQ verification code is $otp. Valid for 5 minutes."
 
         val smsAttributes = mapOf(
             "AWS.SNS.SMS.SMSType" to MessageAttributeValue.builder()

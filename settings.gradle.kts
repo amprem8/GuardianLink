@@ -1,4 +1,4 @@
-rootProject.name = "GuardianLink"
+rootProject.name = "ResQ"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

@@ -74,7 +74,7 @@ class SignupScreenModel : ScreenModel {
                     val msg = if (throwable is ApiException) {
                         throwable.apiError.message
                     } else {
-                        throwable.message ?: "Something went wrong"
+                        "Unable to connect. Please check your internet connection."
                     }
                     _uiState.value = SignupUiState.Error(msg)
                 }

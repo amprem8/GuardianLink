@@ -4,6 +4,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,7 +40,7 @@ private object LogoConfig {
 
 @Composable
 fun SplashScreenContent() {
-        PlatformSplash(title = "Guardian")
+        PlatformSplash(title = "ResQ")
 }
 
 @Composable
@@ -140,7 +143,12 @@ private fun SplashBaseLayout(
                         .background(Color.White, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("🛡️", fontSize = LogoConfig.iconFontSize)
+                    Icon(
+                        imageVector = Icons.Filled.HealthAndSafety,
+                        contentDescription = "ResQ Logo",
+                        tint = Color(0xFF2563EB),
+                        modifier = Modifier.size(LogoConfig.innerSize * 0.5f)
+                    )
                 }
             }
 

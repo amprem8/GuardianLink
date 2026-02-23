@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
@@ -70,13 +72,18 @@ fun AuthScreenComposable(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("🛡️", fontSize = 32.sp)
+                    Icon(
+                        imageVector = Icons.Filled.HealthAndSafety,
+                        contentDescription = "ResQ Logo",
+                        tint = Color.White,
+                        modifier = Modifier.size(40.dp)
+                    )
                 }
 
                 Spacer(Modifier.height(20.dp))
 
                 Text(
-                    text = "Guardian",
+                    text = "ResQ",
                     fontSize = titleSize,
                     fontWeight = FontWeight.Bold
                 )
@@ -100,7 +107,7 @@ fun AuthScreenComposable(
                         .padding(20.dp)
                 ) {
                     FeatureItem("✓", "Instant SOS Alerts", "Reach emergency contacts in seconds", Color(0xFFDCFCE7), Color(0xFF16A34A))
-                    FeatureItem("✓", "Works Offline", "Mesh network relay when no signal", Color(0xFFDBEAFE), Color(0xFF2563EB))
+                    FeatureItem("✓", "Works Offline", "SMS relay when no signal", Color(0xFFDBEAFE), Color(0xFF2563EB))
                     FeatureItem("✓", "Voice & Gesture Activation", "Trigger help hands-free", Color(0xFFF3E8FF), Color(0xFF7C3AED))
                 }
 

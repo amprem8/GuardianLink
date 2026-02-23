@@ -10,7 +10,7 @@ object JwtConfig {
             "JWT_SECRET environment variable must be set"
         }
     }
-    private const val ISSUER = "com.guardianlink"
+    private const val ISSUER = "com.resq"
     private const val VALIDITY_MS = 24 * 3600_000L // 24 hours
     private val algorithm: Algorithm by lazy { Algorithm.HMAC256(secret) }
 

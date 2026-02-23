@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Button
@@ -112,7 +113,12 @@ fun SignupScreen(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("🛡️", fontSize = 24.sp, color = Color.White)
+                    Icon(
+                        imageVector = Icons.Filled.HealthAndSafety,
+                        contentDescription = "ResQ Logo",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
 
                 Spacer(Modifier.height(6.dp))
@@ -124,7 +130,7 @@ fun SignupScreen(
                 )
 
                 Text(
-                    "Join GuardianLink for safer living",
+                    "Join ResQ for safer living",
                     color = Color.Gray,
                     fontSize = 12.sp
                 )

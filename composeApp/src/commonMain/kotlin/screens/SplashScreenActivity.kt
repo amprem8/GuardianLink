@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
+import screenmodel.SplashDestination
 import screenmodel.SplashScreenModel
 import ui.SplashScreenContent
 
@@ -16,11 +17,13 @@ class SplashScreenActivity : Screen {
     override fun Content() {
         val navigator = LocalNavigator.current
         val model = rememberScreenModel { SplashScreenModel() }
-        val finished by model.finished.collectAsState()
+        val destination by model.destination.collectAsState()
 
-        LaunchedEffect(finished) {
-            if (finished) {
-                navigator?.replace(AuthScreenActivity())
+        LaunchedEffect(destination) {
+            when (destination) {
+                SplashDestination.Auth -> navigator?.replace(AuthScreenActivity())
+                SplashDestination.Home -> navigator?.replace(HomeScreenActivity())
+                SplashDestination.None -> { /* still showing splash */ }
             }
         }
 

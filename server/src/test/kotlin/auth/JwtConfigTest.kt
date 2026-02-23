@@ -28,7 +28,7 @@ class JwtConfigTest {
         val token = JwtConfig.generateToken(userId)
 
         val verifier = JWT.require(Algorithm.HMAC256(testSecret))
-            .withIssuer("com.guardianlink")
+            .withIssuer("com.resq")
             .build()
 
         val decoded = verifier.verify(token)
@@ -40,11 +40,11 @@ class JwtConfigTest {
         val token = JwtConfig.generateToken("user-789")
 
         val verifier = JWT.require(Algorithm.HMAC256(testSecret))
-            .withIssuer("com.guardianlink")
+            .withIssuer("com.resq")
             .build()
 
         val decoded = verifier.verify(token)
-        assertEquals("com.guardianlink", decoded.issuer)
+        assertEquals("com.resq", decoded.issuer)
     }
 
     @Test
@@ -52,7 +52,7 @@ class JwtConfigTest {
         val token = JwtConfig.generateToken("user-exp")
 
         val verifier = JWT.require(Algorithm.HMAC256(testSecret))
-            .withIssuer("com.guardianlink")
+            .withIssuer("com.resq")
             .build()
 
         val decoded = verifier.verify(token)

@@ -47,7 +47,11 @@ class OtpLogic(private val authApi: AuthApi) {
         scope.launch {
             authApi.sendOtp(normalized)
                 .onSuccess { _uiState.value = OtpUiState.OtpEntry }
-                .onFailure { _uiState.value = OtpUiState.Error(it.message?:"Unknown") }
+                .onFailure {
+                    val msg = if (it is ApiException) it.apiError.message
+                              else "Unable to connect. Please check your internet connection."
+                    _uiState.value = OtpUiState.Error(msg)
+                }
         }
     }
 

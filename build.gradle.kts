@@ -16,7 +16,7 @@ plugins {
 
 sonar {
     properties {
-        property("sonar.projectKey", "amprem8_GuardianLink")
+        property("sonar.projectKey", "amprem8_ResQ")
         property("sonar.organization", "amprem8")
         property("sonar.host.url", "https://sonarcloud.io")
         property("sonar.sourceEncoding", "UTF-8")

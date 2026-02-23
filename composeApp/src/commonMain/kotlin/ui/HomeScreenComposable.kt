@@ -16,8 +16,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +38,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,26 +64,40 @@ fun HomeScreen(
     state: HomeUiState,
     actions: HomeActions
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF8FAFC))
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        HomeHeader(
-            userName = state.userName,
-            phoneNumber = state.phoneNumber,
-            isOnline = state.isOnline,
-            onEditConfig = actions.onEditConfig,
-            onLogout = actions.onLogout
-        )
-        SOSButton(actions.onTriggerSOS)
-        ContactsSection(state.contacts, actions.onEditContacts)
-        ConfigSection(state.voicePhrase, state.gestureType, actions.onEditConfig)
-        HybridInfoSection()
-        Spacer(Modifier.height(8.dp))
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    Scaffold(
+        containerColor = Color(0xFFF8FAFC),
+        bottomBar = {
+            BottomNavBar(
+                selectedTab = selectedTab,
+                onTabSelected = { },
+                onSettingsClick = actions.onEditConfig
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(top = 16.dp, bottom = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            HomeHeader(
+                userName = state.userName,
+                phoneNumber = state.phoneNumber,
+                isOnline = state.isOnline,
+                onEditConfig = actions.onEditConfig,
+                onLogout = actions.onLogout
+            )
+            SOSButton(actions.onTriggerSOS)
+            ContactsSection(state.contacts, actions.onEditContacts)
+            ConfigSection(state.voicePhrase, state.gestureType, actions.onEditConfig)
+            HybridInfoSection()
+            Spacer(Modifier.height(8.dp))
+        }
     }
 }
 
@@ -88,13 +114,15 @@ private fun HomeHeader(
     var showProfileMenu by remember { mutableStateOf(false) }
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
             Text(
-                "SOS Guardian",
+                "ResQ",
                 fontWeight = FontWeight.Bold,
                 fontSize = 22.sp,
                 color = Color(0xFF111827)
@@ -151,8 +179,12 @@ private fun HomeHeader(
                     expanded = showProfileMenu,
                     onDismissRequest = { showProfileMenu = false },
                     modifier = Modifier
-                        .width(260.dp)
-                        .background(Color.White)
+                        .width(280.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White),
+                    shape = RoundedCornerShape(16.dp),
+                    shadowElevation = 12.dp,
+                    tonalElevation = 0.dp
                 ) {
                     // Gradient header with user info
                     Box(
@@ -163,41 +195,86 @@ private fun HomeHeader(
                                     listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
                                 )
                             )
-                            .padding(16.dp)
+                            .padding(horizontal = 20.dp, vertical = 18.dp)
                     ) {
-                        Column {
-                            Text(
-                                text = userName.ifEmpty { "User" },
-                                color = Color.White,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 16.sp
-                            )
-                            if (phoneNumber.isNotEmpty()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            // Avatar circle in header
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
-                                    text = phoneNumber,
-                                    color = Color(0xFFBFDBFE),
-                                    fontSize = 13.sp
+                                    text = userName.firstOrNull()?.uppercase() ?: "U",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
                                 )
+                            }
+                            Column {
+                                Text(
+                                    text = userName.ifEmpty { "User" },
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 16.sp
+                                )
+                                if (phoneNumber.isNotEmpty()) {
+                                    Text(
+                                        text = phoneNumber,
+                                        color = Color.White.copy(alpha = 0.75f),
+                                        fontSize = 13.sp
+                                    )
+                                }
                             }
                         }
                     }
+
+                    Spacer(Modifier.height(6.dp))
 
                     // Settings
                     DropdownMenuItem(
                         text = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                Text("⚙️", fontSize = 18.sp)
-                                Text("Settings", color = Color(0xFF374151), fontSize = 15.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(Color(0xFFF3F4F6), RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Settings,
+                                        contentDescription = "Settings",
+                                        tint = Color(0xFF6B7280),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Text(
+                                    "Settings",
+                                    color = Color(0xFF374151),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
                             }
                         },
                         onClick = {
                             showProfileMenu = false
                             onEditConfig()
                         },
-                        modifier = Modifier.padding(horizontal = 4.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+
+                    // Divider
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                        thickness = 0.5.dp,
+                        color = Color(0xFFE5E7EB)
                     )
 
                     // Sign Out
@@ -205,18 +282,37 @@ private fun HomeHeader(
                         text = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                Text("🚪", fontSize = 18.sp)
-                                Text("Sign Out", color = Color(0xFFDC2626), fontSize = 15.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(Color(0xFFFEE2E2), RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ExitToApp,
+                                        contentDescription = "Sign Out",
+                                        tint = Color(0xFFDC2626),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Text(
+                                    "Sign Out",
+                                    color = Color(0xFFDC2626),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
                             }
                         },
                         onClick = {
                             showProfileMenu = false
                             onLogout()
                         },
-                        modifier = Modifier.padding(horizontal = 4.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp)
                     )
+
+                    Spacer(Modifier.height(6.dp))
                 }
             }
         }
@@ -458,7 +554,7 @@ private fun HybridInfoSection() {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "How Hybrid SOS Works",
+                    "How ResQ Works",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
@@ -545,5 +641,58 @@ private fun Chip(text: String, bg: Color = Color(0xFFEFF6FF), fg: Color = Color(
             .padding(horizontal = 12.dp, vertical = 4.dp)
     ) {
         Text(text, fontSize = 12.sp, color = fg)
+    }
+}
+
+// ── Bottom Navigation Bar ───────────────────────────────────
+
+private data class NavItem(val label: String, val icon: ImageVector)
+
+@Composable
+private fun BottomNavBar(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    onSettingsClick: () -> Unit
+) {
+    val items = listOf(
+        NavItem("Home", Icons.Default.Home),
+        NavItem("Profile", Icons.Default.Person),
+        NavItem("Settings", Icons.Default.Settings)
+    )
+
+    NavigationBar(
+        containerColor = Color.White,
+        tonalElevation = 8.dp
+    ) {
+        items.forEachIndexed { index, item ->
+            NavigationBarItem(
+                selected = selectedTab == index,
+                onClick = {
+                    onTabSelected(index)
+                    if (index == 2) onSettingsClick()
+                },
+                icon = {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.label,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                label = {
+                    Text(
+                        item.label,
+                        fontSize = 11.sp,
+                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = Color(0xFF2563EB),
+                    selectedTextColor = Color(0xFF2563EB),
+                    unselectedIconColor = Color(0xFF9CA3AF),
+                    unselectedTextColor = Color(0xFF9CA3AF),
+                    indicatorColor = Color(0xFFDBEAFE)
+                )
+            )
+        }
     }
 }

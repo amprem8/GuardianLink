@@ -69,7 +69,7 @@ dependencies {
 
 tasks.test {
     environment("JWT_SECRET", "test-jwt-secret-for-unit-tests-minimum-32-chars-long")
-    environment("CORS_ALLOWED_ORIGIN", "https://guardianlink.example.com")
+    environment("CORS_ALLOWED_ORIGIN", "https://resq.example.com")
     finalizedBy(tasks.jacocoTestReport)
 }
 
