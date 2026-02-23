@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.ktor)
     application
     kotlin("plugin.serialization") version "2.1.0"
+    jacoco
 }
 
 group = "com.example.guardianlink"
@@ -62,4 +63,20 @@ dependencies {
 
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+}
+
+tasks.test {
+    environment("JWT_SECRET", "test-jwt-secret-for-unit-tests-minimum-32-chars-long")
+    environment("CORS_ALLOWED_ORIGIN", "https://guardianlink.example.com")
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
 }

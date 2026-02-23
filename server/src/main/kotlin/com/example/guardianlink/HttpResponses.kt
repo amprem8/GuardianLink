@@ -1,13 +1,26 @@
 package com.example.guardianlink
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+@Serializable
+data class ErrorBody(val code: String, val message: String)
+
+@Serializable
+data class MessageBody(val message: String)
 
 object HttpResponses {
 
-    private val defaultHeaders = mapOf(
-        "Content-Type" to "application/json",
-        "Access-Control-Allow-Origin" to "*"
-    )
+    private val json = Json { encodeDefaults = true }
+
+    private val defaultHeaders: Map<String, String> = buildMap {
+        put("Content-Type", "application/json")
+        val corsOrigin = System.getenv("CORS_ALLOWED_ORIGIN")
+        if (!corsOrigin.isNullOrEmpty()) {
+            put("Access-Control-Allow-Origin", corsOrigin)
+        }
+    }
 
     fun ok(body: String) =
         APIGatewayV2HTTPResponse.builder()
@@ -27,34 +40,34 @@ object HttpResponses {
         APIGatewayV2HTTPResponse.builder()
             .withStatusCode(400)
             .withHeaders(defaultHeaders)
-            .withBody("""{"code":"BAD_REQUEST","message":"$message"}""")
+            .withBody(json.encodeToString(ErrorBody.serializer(), ErrorBody("BAD_REQUEST", message)))
             .build()
 
     fun unauthorized(message: String = "Invalid credentials") =
         APIGatewayV2HTTPResponse.builder()
             .withStatusCode(401)
             .withHeaders(defaultHeaders)
-            .withBody("""{"code":"UNAUTHORIZED","message":"$message"}""")
+            .withBody(json.encodeToString(ErrorBody.serializer(), ErrorBody("UNAUTHORIZED", message)))
             .build()
 
     fun conflict(message: String = "Resource already exists") =
         APIGatewayV2HTTPResponse.builder()
             .withStatusCode(409)
             .withHeaders(defaultHeaders)
-            .withBody("""{"code":"CONFLICT","message":"$message"}""")
+            .withBody(json.encodeToString(ErrorBody.serializer(), ErrorBody("CONFLICT", message)))
             .build()
 
     fun notFound() =
         APIGatewayV2HTTPResponse.builder()
             .withStatusCode(404)
             .withHeaders(defaultHeaders)
-            .withBody("""{"message":"Route not found"}""")
+            .withBody(json.encodeToString(MessageBody.serializer(), MessageBody("Route not found")))
             .build()
 
     fun internalError() =
         APIGatewayV2HTTPResponse.builder()
             .withStatusCode(500)
             .withHeaders(defaultHeaders)
-            .withBody("""{"message":"Internal Server Error"}""")
+            .withBody(json.encodeToString(MessageBody.serializer(), MessageBody("Internal Server Error")))
             .build()
 }

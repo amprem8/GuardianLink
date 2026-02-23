@@ -33,6 +33,13 @@ kotlin {
             }
         }
 
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.test)
+            }
+        }
+
         val iosMain by creating {
             dependsOn(commonMain)
             dependencies {

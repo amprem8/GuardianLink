@@ -20,5 +20,25 @@ sonar {
         property("sonar.organization", "amprem8")
         property("sonar.host.url", "https://sonarcloud.io")
         property("sonar.sourceEncoding", "UTF-8")
+
+        // Coverage report path (JaCoCo XML from server module)
+        property("sonar.coverage.jacoco.xmlReportPaths",
+            "${project(":server").layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml")
+
+        // Exclude UI/platform code from coverage measurement
+        property("sonar.coverage.exclusions", listOf(
+            "composeApp/src/**",
+            "shared/src/**",
+            "**/bin/**",
+            "**/ui/**",
+            "**/screens/**",
+            "**/screenmodel/**"
+        ).joinToString(","))
+
+        // Exclude build output duplicates from analysis
+        property("sonar.exclusions", listOf(
+            "**/bin/**",
+            "**/build/**"
+        ).joinToString(","))
     }
 }
