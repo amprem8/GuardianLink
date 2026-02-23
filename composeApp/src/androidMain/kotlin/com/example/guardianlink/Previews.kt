@@ -3,7 +3,10 @@ package com.example.guardianlink
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import auth.OtpUiState
+import contacts.ContactsPermissionState
+import model.EmergencyContact
 import ui.AuthScreenComposable
+import ui.EmergencyContactsScreen
 import ui.HomeActions
 import ui.HomeScreen
 import ui.HomeUiState
@@ -25,7 +28,6 @@ fun SplashScreenPreview() {
 @Composable
 fun AuthScreenPreview() {
     AuthScreenComposable(
-        onLogin = {},
         onSignup = {}
     )
 }
@@ -109,6 +111,58 @@ fun OtpScreenVerifyingPreview() {
         onSendOtp = {},
         onVerifyOtp = {},
         onErrorDismiss = {}
+    )
+}
+
+// ── Emergency Contacts ──
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun EmergencyContactsEmptyPreview() {
+    EmergencyContactsScreen(
+        contacts = emptyList(),
+        error = "",
+        showAddDialog = false,
+        deviceContacts = emptyList(),
+        isLoadingContacts = false,
+        permissionState = ContactsPermissionState(isGranted = false, launchRequest = {}),
+        onAddContact = { _, _ -> },
+        onAddDeviceContact = {},
+        onRemoveContact = {},
+        onToggleGPS = {},
+        onToggleAudio = {},
+        onShowAddDialog = {},
+        onDismissError = {},
+        onLoadDeviceContacts = {},
+        onContinue = {},
+        onBack = {},
+    )
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun EmergencyContactsWithDataPreview() {
+    EmergencyContactsScreen(
+        contacts = listOf(
+            EmergencyContact("1", "Mom", "+91 9876543210"),
+            EmergencyContact("2", "Dad", "+91 8765432109", includeAudio = false),
+            EmergencyContact("3", "Sister", "+91 7654321098"),
+        ),
+        error = "",
+        showAddDialog = false,
+        deviceContacts = emptyList(),
+        isLoadingContacts = false,
+        permissionState = ContactsPermissionState(isGranted = true, launchRequest = {}),
+        onAddContact = { _, _ -> },
+        onAddDeviceContact = {},
+        onRemoveContact = {},
+        onToggleGPS = {},
+        onToggleAudio = {},
+        onShowAddDialog = {},
+        onDismissError = {},
+        onLoadDeviceContacts = {},
+        onContinue = {},
+        onBack = {},
     )
 }
 

@@ -24,13 +24,21 @@ actual object AppStorage {
     actual fun isRegistered(): Boolean =
         prefs.getBoolean(KEY_REGISTERED, false)
 
+    actual fun isLoggedIn(): Boolean =
+        prefs.getBoolean(KEY_LOGGED_IN, false)
+
+    actual fun setLoggedIn(loggedIn: Boolean) {
+        prefs.edit().putBoolean(KEY_LOGGED_IN, loggedIn).commit()
+    }
+
     actual fun markRegistered(userName: String, userEmail: String, phoneNumber: String) {
         prefs.edit()
             .putBoolean(KEY_REGISTERED, true)
+            .putBoolean(KEY_LOGGED_IN, true)
             .putString(KEY_USER_NAME, userName)
             .putString(KEY_USER_EMAIL, userEmail)
             .putString(KEY_PHONE, phoneNumber)
-            .commit()  // commit() is synchronous — guarantees data is written to disk
+            .commit()
     }
 
     actual fun getUserName(): String =
@@ -42,6 +50,17 @@ actual object AppStorage {
     actual fun getPhoneNumber(): String =
         prefs.getString(KEY_PHONE, "").orEmpty()
 
+    actual fun isContactsConfigured(): Boolean =
+        prefs.getBoolean(KEY_CONTACTS_CONFIGURED, false)
+
+    actual fun markContactsConfigured() {
+        prefs.edit().putBoolean(KEY_CONTACTS_CONFIGURED, true).commit()
+    }
+
+    actual fun logout() {
+        prefs.edit().putBoolean(KEY_LOGGED_IN, false).commit()
+    }
+
     actual fun clear() {
         prefs.edit().clear().commit()
     }
@@ -49,7 +68,9 @@ actual object AppStorage {
     // ── keys ────────────────────────────────────────────────
 
     private const val KEY_REGISTERED = "registered"
+    private const val KEY_LOGGED_IN = "loggedIn"
     private const val KEY_USER_NAME = "userName"
     private const val KEY_USER_EMAIL = "userEmail"
     private const val KEY_PHONE = "phoneNumber"
+    private const val KEY_CONTACTS_CONFIGURED = "contactsConfigured"
 }

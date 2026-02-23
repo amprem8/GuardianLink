@@ -35,7 +35,7 @@ class OtpScreenActivity : Screen {
                     userEmail   = email,
                     phoneNumber = phone,
                 )
-                navigator?.replace(HomeScreenActivity())
+                navigator?.replace(EmergencyContactsActivity())
             }
         }
 

@@ -20,7 +20,6 @@ import platform.PlatformConfig
 
 @Composable
 fun AuthScreenComposable(
-    onLogin: () -> Unit,
     onSignup: () -> Unit
 ) {
     val isAndroid = PlatformConfig.isAndroid

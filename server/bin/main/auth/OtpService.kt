@@ -10,9 +10,12 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemRequest
 import software.amazon.awssdk.services.sns.SnsClient
 import software.amazon.awssdk.services.sns.model.MessageAttributeValue
 import software.amazon.awssdk.services.sns.model.PublishRequest
+import org.slf4j.LoggerFactory
 import java.security.SecureRandom
 
 object OtpService {
+
+    private val logger = LoggerFactory.getLogger(OtpService::class.java)
 
     private const val TABLE_NAME = "OtpTable"
     private const val OTP_TTL_SECONDS = 300L // 5 minutes
@@ -104,19 +107,37 @@ object OtpService {
     private fun sendSms(phone: String, otp: String) {
         val message = "Your ResQ verification code is $otp. Valid for 5 minutes."
 
-        val smsAttributes = mapOf(
-            "AWS.SNS.SMS.SMSType" to MessageAttributeValue.builder()
-                .stringValue("Transactional")
-                .dataType("String")
-                .build()
-        )
+        val smsAttributes = buildMap {
+            put(
+                "AWS.SNS.SMS.SMSType",
+                MessageAttributeValue.builder()
+                    .stringValue("Transactional")
+                    .dataType("String")
+                    .build()
+            )
+            put(
+                "AWS.SNS.SMS.SenderID",
+                MessageAttributeValue.builder()
+                    .stringValue("ResQ")
+                    .dataType("String")
+                    .build()
+            )
+        }
 
-        sns.publish(
-            PublishRequest.builder()
-                .phoneNumber(phone)
-                .message(message)
-                .messageAttributes(smsAttributes)
-                .build()
-        )
+        logger.info("Sending OTP SMS to {}", phone)
+
+        try {
+            val result = sns.publish(
+                PublishRequest.builder()
+                    .phoneNumber(phone)
+                    .message(message)
+                    .messageAttributes(smsAttributes)
+                    .build()
+            )
+            logger.info("SNS publish success – messageId={}", result.messageId())
+        } catch (e: Exception) {
+            logger.error("SNS publish FAILED for {} – {}", phone, e.message, e)
+            throw e
+        }
     }
 }

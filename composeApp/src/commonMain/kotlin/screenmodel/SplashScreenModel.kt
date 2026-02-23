@@ -10,8 +10,10 @@ import storage.AppStorage
 
 sealed class SplashDestination {
     object None : SplashDestination()
-    object Auth : SplashDestination()
-    object Home : SplashDestination()
+    object Auth : SplashDestination()       // never registered → signup
+    object Login : SplashDestination()      // registered but logged out → login
+    object Contacts : SplashDestination()   // logged in but contacts not set up
+    object Home : SplashDestination()       // fully set up → home
 }
 
 class SplashScreenModel : ScreenModel {
@@ -22,10 +24,11 @@ class SplashScreenModel : ScreenModel {
     init {
         screenModelScope.launch {
             delay(5500)
-            _destination.value = if (AppStorage.isRegistered()) {
-                SplashDestination.Home
-            } else {
-                SplashDestination.Auth
+            _destination.value = when {
+                AppStorage.isLoggedIn() && AppStorage.isContactsConfigured() -> SplashDestination.Home
+                AppStorage.isLoggedIn()  -> SplashDestination.Contacts
+                AppStorage.isRegistered() -> SplashDestination.Login
+                else                      -> SplashDestination.Auth
             }
         }
     }

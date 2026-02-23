@@ -21,9 +21,11 @@ class SplashScreenActivity : Screen {
 
         LaunchedEffect(destination) {
             when (destination) {
-                SplashDestination.Auth -> navigator?.replace(AuthScreenActivity())
-                SplashDestination.Home -> navigator?.replace(HomeScreenActivity())
-                SplashDestination.None -> { /* still showing splash */ }
+                SplashDestination.Auth     -> navigator?.replace(AuthScreenActivity())
+                SplashDestination.Login    -> navigator?.replace(LoginScreenActivity())
+                SplashDestination.Contacts -> navigator?.replace(EmergencyContactsActivity())
+                SplashDestination.Home     -> navigator?.replace(HomeScreenActivity())
+                SplashDestination.None     -> { /* still showing splash */ }
             }
         }
 

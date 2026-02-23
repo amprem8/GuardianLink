@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    kotlin("plugin.serialization") version "2.3.0"
 }
 
 kotlin {
@@ -28,6 +29,7 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            implementation("androidx.security:security-crypto:1.1.0")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -45,6 +47,8 @@ kotlin {
             implementation(libs.voyager.screenmodel)
 
             implementation(libs.kotlinx.coroutines.core)
+
+            implementation(libs.kotlinx.serialization.json)
 
             implementation(projects.shared)
         }

@@ -5,6 +5,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import session.UserSession
 import storage.AppStorage
+import storage.ContactStorage
 import ui.HomeScreen
 import ui.HomeUiState
 import ui.HomeActions
@@ -20,10 +21,13 @@ class HomeScreenActivity : Screen {
         val userEmail = UserSession.userEmail.ifEmpty { AppStorage.getUserEmail() }
         val phoneNumber = AppStorage.getPhoneNumber()
 
+        // Load saved emergency contacts for display
+        val savedContacts = ContactStorage.loadContacts()
+
         val state = HomeUiState(
             userName = userName,
             phoneNumber = phoneNumber,
-            contacts = emptyList(),
+            contacts = savedContacts.map { it.name },
             voicePhrase = "",
             gestureType = "",
             isOnline = true
@@ -31,13 +35,13 @@ class HomeScreenActivity : Screen {
 
         val actions = HomeActions(
             onTriggerSOS = {},
-            onEditContacts = {},
+            onEditContacts = { navigator?.push(EmergencyContactsActivity()) },
             onEditConfig = {},
             onLogout = {
-                // Clear persisted registration + in-memory session
-                AppStorage.clear()
+                // Clear login session but keep registration data
+                AppStorage.logout()
                 UserSession.logout()
-                navigator?.replaceAll(AuthScreenActivity())
+                navigator?.replaceAll(LoginScreenActivity())
             }
         )
 
