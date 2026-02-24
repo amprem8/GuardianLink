@@ -1,11 +1,15 @@
 package screens
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
+import network.NetworkConnectivityObserver
 import session.UserSession
 import storage.AppStorage
 import storage.ContactStorage
+import storage.TriggerConfigStorage
 import ui.HomeScreen
 import ui.HomeUiState
 import ui.HomeActions
@@ -24,19 +28,25 @@ class HomeScreenActivity : Screen {
         // Load saved emergency contacts for display
         val savedContacts = ContactStorage.loadContacts()
 
+        // Load trigger configuration
+        val triggerConfig = TriggerConfigStorage.loadConfig()
+
+        // Real-time network connectivity state
+        val isOnline by NetworkConnectivityObserver.isOnline.collectAsState()
+
         val state = HomeUiState(
             userName = userName,
             phoneNumber = phoneNumber,
             contacts = savedContacts.map { it.name },
-            voicePhrase = "",
-            gestureType = "",
-            isOnline = true
+            voicePhrase = triggerConfig.voicePhrase,
+            gestureType = triggerConfig.gestureType,
+            isOnline = isOnline
         )
 
         val actions = HomeActions(
             onTriggerSOS = {},
             onEditContacts = { navigator?.push(EmergencyContactsActivity()) },
-            onEditConfig = {},
+            onEditConfig = { navigator?.push(TriggerConfigActivity()) },
             onLogout = {
                 // Clear login session but keep registration data
                 AppStorage.logout()

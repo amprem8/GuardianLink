@@ -7,8 +7,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import contacts.DeviceContactsHelper
+import network.NetworkConnectivityObserver
 import storage.AppStorage
 import storage.ContactStorage
+import storage.TriggerConfigStorage
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,6 +20,9 @@ class MainActivity : ComponentActivity() {
         AppStorage.init(this)
         ContactStorage.init(this)
         DeviceContactsHelper.init(this)
+        TriggerConfigStorage.init(this)
+        NetworkConnectivityObserver.init(this)
+        NetworkConnectivityObserver.start()
 
         setContent {
             App()

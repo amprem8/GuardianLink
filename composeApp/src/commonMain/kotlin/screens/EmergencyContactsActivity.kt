@@ -44,7 +44,7 @@ class EmergencyContactsActivity : Screen {
             onContinue = {
                 if (model.canContinue) {
                     AppStorage.markContactsConfigured()
-                    navigator?.replaceAll(HomeScreenActivity())
+                    navigator?.replaceAll(TriggerConfigActivity())
                 }
             },
             onBack = { navigator?.pop() },

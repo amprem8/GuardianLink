@@ -59,6 +59,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -407,19 +408,22 @@ private fun ContactCard(
         // Toggles
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             ToggleRow(
-                icon = { Icon(Icons.Filled.LocationOn, null, Modifier.size(16.dp), tint = Color(0xFF6B7280)) },
-                label = "Include GPS",
+                icon = { Icon(Icons.Filled.LocationOn, null, Modifier.size(14.dp), tint = Color(0xFF6B7280)) },
+                label = "GPS",
                 checked = contact.includeGPS,
                 onToggle = onToggleGPS,
+                modifier = Modifier.weight(1f),
             )
+            Spacer(Modifier.width(12.dp))
             ToggleRow(
-                icon = { Icon(Icons.Filled.Mic, null, Modifier.size(16.dp), tint = Color(0xFF6B7280)) },
-                label = "Include Audio",
+                icon = { Icon(Icons.Filled.Mic, null, Modifier.size(14.dp), tint = Color(0xFF6B7280)) },
+                label = "Audio",
                 checked = contact.includeAudio,
                 onToggle = onToggleAudio,
+                modifier = Modifier.weight(1f),
             )
         }
     }
@@ -431,10 +435,22 @@ private fun ToggleRow(
     label: String,
     checked: Boolean,
     onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         icon()
-        Text(label, fontSize = 13.sp, color = Color(0xFF374151))
+        Text(
+            label,
+            fontSize = 12.sp,
+            color = Color(0xFF374151),
+            modifier = Modifier.weight(1f, fill = false),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         Switch(
             checked = checked,
             onCheckedChange = { onToggle() },
@@ -444,7 +460,9 @@ private fun ToggleRow(
                 uncheckedThumbColor = Color.White,
                 uncheckedTrackColor = Color(0xFFD1D5DB),
             ),
-            modifier = Modifier.height(20.dp),
+            modifier = Modifier
+                .height(18.dp)
+                .graphicsLayer(scaleX = 0.75f, scaleY = 0.75f),
         )
     }
 }
@@ -536,12 +554,18 @@ private fun AddContactDialog(
                         phone = phone,
                         error = localError,
                         onNameChange = { name = it },
-                        onPhoneChange = { phone = it.filter { c -> c.isDigit() }.take(10) },
+                        onPhoneChange = { phone = it.filter { c -> c.isDigit() || c == '+' }.take(13) },
                     )
                 } else {
                     if (!permissionState.isGranted) {
                         PermissionRequest(onGrant = { permissionState.launchRequest() })
                     } else {
+                        // Auto-load contacts when permission is granted
+                        // Fixes the first-try bug: if permission was just granted
+                        // after showing the PermissionRequest, contacts were never loaded
+                        LaunchedEffect(permissionState.isGranted) {
+                            onLoadDeviceContacts()
+                        }
                         ContactPickerList(
                             contacts = deviceContacts,
                             isLoading = isLoadingContacts,

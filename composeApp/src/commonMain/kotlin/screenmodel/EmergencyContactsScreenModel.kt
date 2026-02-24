@@ -59,10 +59,10 @@ class EmergencyContactsScreenModel : ScreenModel {
             _error.value = "Maximum $MAX_CONTACTS contacts allowed"
             return
         }
-        // Check duplicate
+        // Check duplicate by normalized digits
         val formatted = formatIndianPhone(phone)
-        if (_contacts.value.any { it.phone == formatted }) {
-            _error.value = "This contact is already added"
+        if (_contacts.value.any { normalizeToDigits(it.phone) == normalizeToDigits(formatted) }) {
+            _error.value = "This phone number is already added"
             return
         }
 
@@ -86,9 +86,13 @@ class EmergencyContactsScreenModel : ScreenModel {
             return
         }
         val cleanedPhone = dc.phone.replace("\\D".toRegex(), "")
+        if (!isValidIndianPhone(cleanedPhone)) {
+            _error.value = "Only Indian mobile numbers are accepted (10 digits starting with 6-9)"
+            return
+        }
         val formatted = formatIndianPhone(cleanedPhone)
-        if (_contacts.value.any { it.phone == formatted }) {
-            _error.value = "This contact is already added"
+        if (_contacts.value.any { normalizeToDigits(it.phone) == normalizeToDigits(formatted) }) {
+            _error.value = "This phone number is already added"
             return
         }
         val contact = EmergencyContact(
@@ -124,7 +128,7 @@ class EmergencyContactsScreenModel : ScreenModel {
 
     fun loadDeviceContacts() {
         // Skip if already loaded (cached)
-        if (contactsFetched && _deviceContacts.value.isNotEmpty()) return
+        if (contactsFetched) return
 
         _isLoadingContacts.value = true
         screenModelScope.launch {
@@ -163,6 +167,13 @@ class EmergencyContactsScreenModel : ScreenModel {
                     "+${cleaned.substring(0, 2)} ${cleaned.substring(2)}"
                 else -> phone
             }
+        }
+
+        /** Strips all non-digit characters for comparison. */
+        fun normalizeToDigits(phone: String): String {
+            val digits = phone.replace("\\D".toRegex(), "")
+            // Normalize to last 10 digits for consistent comparison
+            return if (digits.length >= 10) digits.takeLast(10) else digits
         }
 
         /** Simple random ID generator (no external library needed). */

@@ -1,5 +1,6 @@
 package ui
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -9,6 +10,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -21,6 +23,9 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SignalCellular4Bar
+import androidx.compose.material.icons.filled.SignalCellularOff
+import androidx.compose.material.icons.filled.SignalWifiOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -40,6 +45,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -131,22 +137,8 @@ private fun HomeHeader(
         }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Status chip
-            if (isOnline) {
-                StatusChip(
-                    icon = "📶",
-                    text = "Online",
-                    bg = Color(0xFFDCFCE7),
-                    fg = Color(0xFF15803D)
-                )
-            } else {
-                StatusChip(
-                    icon = "💬",
-                    text = "SMS Mode",
-                    bg = Color(0xFFFEF3C7),
-                    fg = Color(0xFF92400E)
-                )
-            }
+            // Real-time network status indicator
+            NetworkStatusChip(isOnline = isOnline)
 
             // Profile button + menu
             Box {
@@ -439,12 +431,14 @@ private fun ContactsSection(contacts: List<String>, onEditContacts: () -> Unit) 
 
                 if (contacts.isNotEmpty()) {
                     Spacer(Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        contacts.take(3).forEach {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        contacts.forEach {
                             Chip(it, Color(0xFFEFF6FF), Color(0xFF1D4ED8))
-                        }
-                        if (contacts.size > 3) {
-                            Chip("+${contacts.size - 3} more", Color(0xFFF3F4F6), Color(0xFF4B5563))
                         }
                     }
                 }
@@ -619,17 +613,46 @@ private fun DashboardCard(
     )
 }
 
+// ── Network Status Indicator ────────────────────────────────
+
+/**
+ * Animated network status chip using Material signal icons.
+ * Online  → green chip with SignalCellular4Bar
+ * Offline → red chip with SignalCellularOff + SignalWifiOff
+ */
 @Composable
-private fun StatusChip(icon: String, text: String, bg: Color, fg: Color) {
+private fun NetworkStatusChip(isOnline: Boolean) {
+    val bgColor by animateColorAsState(
+        targetValue = if (isOnline) Color(0xFFDCFCE7) else Color(0xFFFEE2E2),
+        animationSpec = tween(durationMillis = 200),
+        label = "chipBg"
+    )
+    val fgColor by animateColorAsState(
+        targetValue = if (isOnline) Color(0xFF15803D) else Color(0xFFDC2626),
+        animationSpec = tween(durationMillis = 200),
+        label = "chipFg"
+    )
+
     Row(
         modifier = Modifier
-            .background(bg, RoundedCornerShape(50))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .background(bgColor, RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        Text(icon, fontSize = 14.sp)
-        Text(text, color = fg, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Icon(
+            imageVector = if (isOnline) Icons.Default.SignalCellular4Bar
+                          else Icons.Default.SignalCellularOff,
+            contentDescription = if (isOnline) "Online" else "Offline",
+            tint = fgColor,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = if (isOnline) "Online" else "Offline",
+            color = fgColor,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
@@ -640,7 +663,13 @@ private fun Chip(text: String, bg: Color = Color(0xFFEFF6FF), fg: Color = Color(
             .background(bg, RoundedCornerShape(50))
             .padding(horizontal = 12.dp, vertical = 4.dp)
     ) {
-        Text(text, fontSize = 12.sp, color = fg)
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            color = fg,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
