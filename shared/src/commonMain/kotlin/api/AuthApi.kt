@@ -13,7 +13,7 @@ import network.createHttpClient
 import util.ApiError
 import util.ApiException
 
-class AuthApi {
+class AuthApi : AuthApiContract {
     private val client = createHttpClient()
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -35,7 +35,7 @@ class AuthApi {
         else throw parseError(response)
     }
 
-    suspend fun sendOtp(phone: String): Result<Unit> = runCatching {
+    override suspend fun sendOtp(phone: String): Result<Unit> = runCatching {
         val response = client.post("${AppConfig.BASE_URL}/otp/send") {
             contentType(ContentType.Application.Json)
             setBody(SendOtpRequest(phone))
@@ -43,7 +43,7 @@ class AuthApi {
         if (!response.status.isSuccess()) throw parseError(response)
     }
 
-    suspend fun verifyOtp(phone: String, otp: String): Result<Unit> = runCatching {
+    override suspend fun verifyOtp(phone: String, otp: String): Result<Unit> = runCatching {
         val response = client.post("${AppConfig.BASE_URL}/otp/verify") {
             contentType(ContentType.Application.Json)
             setBody(VerifyOtpRequest(phone, otp))

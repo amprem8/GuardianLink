@@ -1,6 +1,6 @@
 package auth
 
-import api.AuthApi
+import api.AuthApiContract
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -9,9 +9,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import util.ApiException
 
-class OtpLogic(private val authApi: AuthApi) {
-
-    private val scope = CoroutineScope(Dispatchers.IO)
+class OtpLogic(
+    private val authApi: AuthApiContract,
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+) {
 
     private val _uiState = MutableStateFlow<OtpUiState>(OtpUiState.PhoneEntry)
     val uiState: StateFlow<OtpUiState> = _uiState

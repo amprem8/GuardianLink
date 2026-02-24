@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.sns.SnsClient
 import software.amazon.awssdk.services.sns.model.MessageAttributeValue
 import software.amazon.awssdk.services.sns.model.PublishRequest
 import org.slf4j.LoggerFactory
+import java.security.MessageDigest
 import java.security.SecureRandom
 
 object OtpService {
@@ -54,7 +55,7 @@ object OtpService {
         }
 
         val storedOtp = stored["otp"]?.s() ?: return false
-        if (storedOtp != otp) return false
+        if (!MessageDigest.isEqual(storedOtp.toByteArray(), otp.toByteArray())) return false
 
         // OTP matched — delete so it can't be reused
         deleteOtp(phone)
