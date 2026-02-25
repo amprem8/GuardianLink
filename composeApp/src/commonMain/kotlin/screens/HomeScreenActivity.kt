@@ -66,7 +66,7 @@ class HomeScreenActivity : Screen {
         )
 
         val actions = HomeActions(
-            onTriggerSOS = {},
+            onTriggerSOS = { navigator?.push(ActiveSOSActivity()) },
             onEditContacts = { navigator?.push(EmergencyContactsActivity(isSetupFlow = false)) },
             onEditConfig = { navigator?.push(TriggerConfigActivity()) },
             onLogout = {

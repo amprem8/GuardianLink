@@ -5,6 +5,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import auth.OtpUiState
 import contacts.ContactsPermissionState
 import model.EmergencyContact
+import ui.ActiveSOSScreen
 import ui.AuthScreenComposable
 import ui.EmergencyContactsScreen
 import ui.HomeActions
@@ -207,5 +208,34 @@ fun HomeScreenOfflinePreview() {
             onEditConfig = {},
             onLogout = {}
         )
+    )
+}
+
+// ── Active SOS ──
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun ActiveSOSOnlinePreview() {
+    ActiveSOSScreen(
+        contacts = listOf(
+            EmergencyContact("1", "Mom", "+91 9876543210"),
+            EmergencyContact("2", "Dad", "+91 8765432109"),
+            EmergencyContact("3", "Sister", "+91 7654321098"),
+        ),
+        isOnline = true,
+        onCancel = {},
+    )
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun ActiveSOSOfflinePreview() {
+    ActiveSOSScreen(
+        contacts = listOf(
+            EmergencyContact("1", "Mom", "+91 9876543210"),
+            EmergencyContact("2", "Dad", "+91 8765432109"),
+        ),
+        isOnline = false,
+        onCancel = {},
     )
 }
