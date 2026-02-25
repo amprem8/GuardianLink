@@ -1,9 +1,11 @@
 package com.example.guardianlink
 
-import SOSApp
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import cafe.adriel.voyager.navigator.Navigator
+import screens.SplashScreenActivity
 
 @Composable
 fun App() {
-    SOSApp()
+    MaterialTheme { Navigator(SplashScreenActivity()) }
 }
