@@ -31,7 +31,8 @@ class SignupScreenActivity : Screen {
             onSignup = { name, email, password, confirmPassword, agreeToTerms ->
                 model.signup(name, email, password, confirmPassword, agreeToTerms)
             },
-            onDismissError = model::dismissError
+            onDismissError = model::dismissError,
+            onSignIn = { navigator?.pop() },
         )
     }
 }

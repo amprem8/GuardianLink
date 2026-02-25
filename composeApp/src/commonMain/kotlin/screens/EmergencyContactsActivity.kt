@@ -11,7 +11,9 @@ import screenmodel.EmergencyContactsScreenModel
 import storage.AppStorage
 import ui.EmergencyContactsScreen
 
-class EmergencyContactsActivity : Screen {
+class EmergencyContactsActivity(
+    private val isSetupFlow: Boolean = true
+) : Screen {
 
     @Composable
     override fun Content() {
@@ -44,7 +46,11 @@ class EmergencyContactsActivity : Screen {
             onContinue = {
                 if (model.canContinue) {
                     AppStorage.markContactsConfigured()
-                    navigator?.replaceAll(TriggerConfigActivity())
+                    if (isSetupFlow) {
+                        navigator?.push(TriggerConfigActivity())
+                    } else {
+                        navigator?.pop()
+                    }
                 }
             },
             onBack = { navigator?.pop() },

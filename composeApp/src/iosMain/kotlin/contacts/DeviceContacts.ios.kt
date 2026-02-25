@@ -2,6 +2,7 @@
 
 package contacts
 
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import model.DeviceContact
@@ -15,6 +16,7 @@ import platform.Contacts.CNPhoneNumber
 
 actual object DeviceContactsHelper {
 
+    @OptIn(ExperimentalForeignApi::class)
     actual suspend fun fetchContacts(): List<DeviceContact> = withContext(Dispatchers.Default) {
         val result = mutableListOf<DeviceContact>()
         val store = CNContactStore()

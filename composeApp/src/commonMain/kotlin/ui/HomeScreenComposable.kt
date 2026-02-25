@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SignalCellular4Bar
 import androidx.compose.material.icons.filled.SignalCellularOff
-import androidx.compose.material.icons.filled.SignalWifiOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -48,6 +47,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import permissions.PermissionState
+
+/**
+ * Holds the grant status for each SOS-critical permission.
+ */
+data class PermissionsUiState(
+    val location: PermissionState,
+    val microphone: PermissionState,
+    val phoneCall: PermissionState,
+    val sms: PermissionState,
+    val notifications: PermissionState,
+) {
+    val allGranted: Boolean
+        get() = location.isGranted && microphone.isGranted && phoneCall.isGranted &&
+                sms.isGranted && notifications.isGranted
+
+    val grantedCount: Int
+        get() = listOf(location, microphone, phoneCall, sms, notifications).count { it.isGranted }
+
+    val totalCount: Int get() = 5
+}
 
 data class HomeUiState(
     val userName: String,
@@ -55,7 +75,8 @@ data class HomeUiState(
     val contacts: List<String>,
     val voicePhrase: String,
     val gestureType: String,
-    val isOnline: Boolean
+    val isOnline: Boolean,
+    val permissions: PermissionsUiState? = null,
 )
 
 data class HomeActions(
@@ -101,6 +122,9 @@ fun HomeScreen(
             SOSButton(actions.onTriggerSOS)
             ContactsSection(state.contacts, actions.onEditContacts)
             ConfigSection(state.voicePhrase, state.gestureType, actions.onEditConfig)
+            if (state.permissions != null) {
+                PermissionsSection(state.permissions)
+            }
             HybridInfoSection()
             Spacer(Modifier.height(8.dp))
         }
@@ -514,6 +538,156 @@ private fun ConfigSection(
                         fontSize = 14.sp
                     )
                 }
+            }
+        }
+    }
+}
+
+// ── Permissions Section ─────────────────────────────────────
+
+@Composable
+private fun PermissionsSection(permissions: PermissionsUiState) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(2.dp, RoundedCornerShape(16.dp))
+            .background(Color.White, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            if (permissions.allGranted) Color(0xFFDCFCE7) else Color(0xFFFEF3C7),
+                            CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        if (permissions.allGranted) "✅" else "🔐",
+                        fontSize = 22.sp,
+                    )
+                }
+
+                Column {
+                    Text(
+                        "App Permissions",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color(0xFF111827),
+                    )
+                    Text(
+                        "${permissions.grantedCount}/${permissions.totalCount} granted",
+                        color = if (permissions.allGranted) Color(0xFF15803D) else Color(0xFF92400E),
+                        fontSize = 13.sp,
+                    )
+                }
+            }
+        }
+
+        if (!permissions.allGranted) {
+            HorizontalDivider(thickness = 0.5.dp, color = Color(0xFFE5E7EB))
+        }
+
+        // Individual permission rows — only show un-granted ones
+        PermissionRow(
+            label = "Location",
+            description = "Share GPS with contacts during SOS",
+            emoji = "📍",
+            state = permissions.location,
+        )
+        PermissionRow(
+            label = "Microphone",
+            description = "Record audio & detect voice command",
+            emoji = "🎙️",
+            state = permissions.microphone,
+        )
+        PermissionRow(
+            label = "Phone Calls",
+            description = "Call contacts when offline",
+            emoji = "📞",
+            state = permissions.phoneCall,
+        )
+        PermissionRow(
+            label = "SMS",
+            description = "Send location via text when offline",
+            emoji = "💬",
+            state = permissions.sms,
+        )
+        PermissionRow(
+            label = "Notifications",
+            description = "Receive SOS alerts from others",
+            emoji = "🔔",
+            state = permissions.notifications,
+        )
+    }
+}
+
+@Composable
+private fun PermissionRow(
+    label: String,
+    description: String,
+    emoji: String,
+    state: PermissionState,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(emoji, fontSize = 20.sp)
+            Column {
+                Text(
+                    label,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    color = Color(0xFF374151),
+                )
+                Text(
+                    description,
+                    fontSize = 12.sp,
+                    color = Color(0xFF9CA3AF),
+                )
+            }
+        }
+
+        if (state.isGranted) {
+            Box(
+                modifier = Modifier
+                    .background(Color(0xFFDCFCE7), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Text("Granted", color = Color(0xFF15803D), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .background(
+                        Brush.horizontalGradient(listOf(Color(0xFF2563EB), Color(0xFF7C3AED))),
+                        RoundedCornerShape(8.dp),
+                    )
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { state.launchRequest() }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Text("Grant", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
         }
     }

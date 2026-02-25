@@ -6,6 +6,11 @@ import androidx.compose.runtime.getValue
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import network.NetworkConnectivityObserver
+import permissions.rememberLocationPermission
+import permissions.rememberMicrophonePermission
+import permissions.rememberNotificationPermission
+import permissions.rememberPhoneCallPermission
+import permissions.rememberSmsPermission
 import session.UserSession
 import storage.AppStorage
 import storage.ContactStorage
@@ -13,6 +18,7 @@ import storage.TriggerConfigStorage
 import ui.HomeScreen
 import ui.HomeUiState
 import ui.HomeActions
+import ui.PermissionsUiState
 
 class HomeScreenActivity : Screen {
 
@@ -34,18 +40,34 @@ class HomeScreenActivity : Screen {
         // Real-time network connectivity state
         val isOnline by NetworkConnectivityObserver.isOnline.collectAsState()
 
+        // Runtime permissions
+        val locationPerm = rememberLocationPermission()
+        val microphonePerm = rememberMicrophonePermission()
+        val phoneCallPerm = rememberPhoneCallPermission()
+        val smsPerm = rememberSmsPermission()
+        val notificationPerm = rememberNotificationPermission()
+
+        val permissionsState = PermissionsUiState(
+            location = locationPerm,
+            microphone = microphonePerm,
+            phoneCall = phoneCallPerm,
+            sms = smsPerm,
+            notifications = notificationPerm,
+        )
+
         val state = HomeUiState(
             userName = userName,
             phoneNumber = phoneNumber,
             contacts = savedContacts.map { it.name },
             voicePhrase = triggerConfig.voicePhrase,
             gestureType = triggerConfig.gestureType,
-            isOnline = isOnline
+            isOnline = isOnline,
+            permissions = permissionsState,
         )
 
         val actions = HomeActions(
             onTriggerSOS = {},
-            onEditContacts = { navigator?.push(EmergencyContactsActivity()) },
+            onEditContacts = { navigator?.push(EmergencyContactsActivity(isSetupFlow = false)) },
             onEditConfig = { navigator?.push(TriggerConfigActivity()) },
             onLogout = {
                 // Clear login session but keep registration data

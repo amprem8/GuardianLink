@@ -55,7 +55,8 @@ fun SignupScreen(
     isLoading: Boolean,
     error: String,
     onSignup: (name: String, email: String, password: String, confirmPassword: String, agreeToTerms: Boolean) -> Unit,
-    onDismissError: () -> Unit
+    onDismissError: () -> Unit,
+    onSignIn: () -> Unit = {},
 ) {
 
     var name by remember { mutableStateOf("") }
@@ -253,7 +254,7 @@ fun SignupScreen(
                     "Sign in",
                     color = Color(0xFF2563EB),
                     fontSize = 12.sp,
-                    modifier = Modifier.clickable { }
+                    modifier = Modifier.clickable { onSignIn() }
                 )
             }
 

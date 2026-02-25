@@ -78,6 +78,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import contacts.ContactsPermissionState
+import kotlinx.coroutines.delay
 import model.DeviceContact
 import model.EmergencyContact
 
@@ -179,19 +180,7 @@ fun EmergencyContactsScreen(
                     )
                 }
 
-                // ── Error banner ──
-                AnimatedVisibility(visible = error.isNotEmpty(), enter = fadeIn(), exit = fadeOut()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFFFFF1F2), RoundedCornerShape(12.dp))
-                            .border(1.dp, Color(0xFFFECACA), RoundedCornerShape(12.dp))
-                            .padding(14.dp)
-                            .clickable { onDismissError() }
-                    ) {
-                        Text(error, color = Color(0xFFB91C1C), fontSize = 13.sp)
-                    }
-                }
+                // ── Error banner (moved to overlay) ──
 
                 // ── Contact cards ──
                 contacts.forEach { contact ->
@@ -302,6 +291,55 @@ fun EmergencyContactsScreen(
                         )
                     }
                 }
+            }
+        }
+
+        // ── Slide-in error toast (top-right overlay) ──
+        // Auto-dismiss after 3 seconds
+        LaunchedEffect(error) {
+            if (error.isNotEmpty()) {
+                delay(3000)
+                onDismissError()
+            }
+        }
+
+        AnimatedVisibility(
+            visible = error.isNotEmpty(),
+            enter = slideInHorizontally(
+                initialOffsetX = { fullWidth -> fullWidth },
+                animationSpec = tween(durationMillis = 350)
+            ) + fadeIn(animationSpec = tween(350)),
+            exit = slideOutHorizontally(
+                targetOffsetX = { fullWidth -> fullWidth },
+                animationSpec = tween(durationMillis = 300)
+            ) + fadeOut(animationSpec = tween(300)),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 64.dp, end = 12.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .shadow(8.dp, RoundedCornerShape(12.dp))
+                    .background(Color(0xFFFFF1F2), RoundedCornerShape(12.dp))
+                    .border(1.dp, Color(0xFFFECACA), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    error,
+                    color = Color(0xFFB91C1C),
+                    fontSize = 13.sp,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Dismiss",
+                    tint = Color(0xFFB91C1C),
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clickable { onDismissError() },
+                )
             }
         }
 
