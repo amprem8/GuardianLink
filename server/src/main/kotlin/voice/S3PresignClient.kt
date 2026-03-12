@@ -1,7 +1,7 @@
 package voice
 
 import org.slf4j.LoggerFactory
-import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import software.amazon.awssdk.services.s3.presigner.S3Presigner
@@ -16,25 +16,27 @@ object S3PresignClient {
     private const val URL_VALIDITY_MINUTES = 10L
 
     private val presigner: S3Presigner by lazy {
+        // DefaultCredentialsProvider automatically picks up:
+        //   1. Lambda execution-role credentials (via AWS_CONTAINER_CREDENTIALS_RELATIVE_URI)
+        //   2. Environment variables  (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY)
+        //   3. ~/.aws/credentials for local development
         S3Presigner.builder()
             .region(Region.AP_SOUTH_1)
-            .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+            .credentialsProvider(DefaultCredentialsProvider.builder().build())
             .build()
     }
 
     /**
-     * Returns a pre-signed PUT URL valid for [URL_VALIDITY_MINUTES] minutes.
-     *
-     * @param username  The user's name/id (used as folder)
-     * @param phrase    The activation phrase (sanitised, used as sub-folder)
-     * @return          HTTPS pre-signed URL string
+     * Returns a Pair(presignedPutUrl, s3Key) valid for [URL_VALIDITY_MINUTES] minutes.
+     * Single source of truth for key construction — callers never need to duplicate the
+     * sanitise logic.
      */
-    fun presignPutUrl(username: String, phrase: String): String {
+    fun presignPutUrlWithKey(username: String, phrase: String): Pair<String, String> {
         val safeUsername = sanitise(username)
         val safePhrase   = sanitise(phrase)
         val key = "voice-phrases/$safeUsername/$safePhrase/audio.m4a"
 
-        logger.info("Generating pre-sign PUT URL for key: {}", key)
+        logger.info("Generating pre-signed PUT URL for key: {}", key)
 
         val putRequest = PutObjectRequest.builder()
             .bucket(BUCKET)
@@ -47,7 +49,9 @@ object S3PresignClient {
             .putObjectRequest(putRequest)
             .build()
 
-        return presigner.presignPutObject(presignRequest).url().toString()
+        val url = presigner.presignPutObject(presignRequest).url().toString()
+        logger.info("Pre-signed URL generated successfully for key: {}", key)
+        return Pair(url, key)
     }
 
     /** Replace spaces with underscores and strip everything except alphanumerics / hyphens / underscores. */

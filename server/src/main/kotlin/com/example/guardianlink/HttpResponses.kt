@@ -64,10 +64,10 @@ object HttpResponses {
             .withBody(json.encodeToString(MessageBody.serializer(), MessageBody("Route not found")))
             .build()
 
-    fun internalError() =
+    fun internalError(message: String = "Internal Server Error") =
         APIGatewayV2HTTPResponse.builder()
             .withStatusCode(500)
             .withHeaders(defaultHeaders)
-            .withBody(json.encodeToString(MessageBody.serializer(), MessageBody("Internal Server Error")))
+            .withBody(json.encodeToString(MessageBody.serializer(), MessageBody(message)))
             .build()
 }

@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
         NetworkConnectivityObserver.init(this)
         NetworkConnectivityObserver.start()
         initTriggerConfigPlatform(this)
+        MonitoringServiceController.syncWithStoredPreference(this)
 
         setContent {
             App()

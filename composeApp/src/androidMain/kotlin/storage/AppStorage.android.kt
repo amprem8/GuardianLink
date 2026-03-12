@@ -5,6 +5,7 @@ package storage
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.guardianlink.MonitoringServiceController
 
 actual object AppStorage {
 
@@ -45,7 +46,10 @@ actual object AppStorage {
 
     // ── Monitoring toggles ──────────────────────────────────
     actual fun isContinuousMonitoring(): Boolean = prefs.getBoolean(KEY_CONTINUOUS_MONITORING, true)
-    actual fun setContinuousMonitoring(enabled: Boolean) { prefs.edit().putBoolean(KEY_CONTINUOUS_MONITORING, enabled).commit() }
+    actual fun setContinuousMonitoring(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_CONTINUOUS_MONITORING, enabled).commit()
+        MonitoringServiceController.applyContinuousMonitoring(appContext, enabled)
+    }
 
     actual fun isVoiceChoice(): Boolean = prefs.getBoolean(KEY_VOICE_CHOICE, false)
     actual fun setVoiceChoice(enabled: Boolean) { prefs.edit().putBoolean(KEY_VOICE_CHOICE, enabled).commit() }

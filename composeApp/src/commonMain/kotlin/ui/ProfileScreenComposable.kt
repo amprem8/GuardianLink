@@ -205,6 +205,8 @@ fun MonitoringTogglesCard(
     onSetContinuousMonitoring: (Boolean) -> Unit,
     onSetVoiceChoice: (Boolean) -> Unit,
 ) {
+    var showDisableMonitoringDialog by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -236,7 +238,13 @@ fun MonitoringTogglesCard(
                 subtitle = "24/7 background trigger detection",
                 badgeColor = Color(0xFF15803D),
                 checked = continuousMonitoring,
-                onCheckedChange = onSetContinuousMonitoring,
+                onCheckedChange = { enabled ->
+                    if (continuousMonitoring && !enabled) {
+                        showDisableMonitoringDialog = true
+                    } else {
+                        onSetContinuousMonitoring(enabled)
+                    }
+                },
                 checkedTrackColor = Color(0xFF2563EB),
             )
 
@@ -276,6 +284,88 @@ fun MonitoringTogglesCard(
                 onCheckedChange = onSetVoiceChoice,
                 checkedTrackColor = Color(0xFF7C3AED),
             )
+        }
+    }
+
+    if (showDisableMonitoringDialog) {
+        DisableContinuousMonitoringDialog(
+            onDismiss = { showDisableMonitoringDialog = false },
+            onConfirmTurnOff = {
+                showDisableMonitoringDialog = false
+                onSetContinuousMonitoring(false)
+            },
+        )
+    }
+}
+
+@Composable
+private fun DisableContinuousMonitoringDialog(
+    onDismiss: () -> Unit,
+    onConfirmTurnOff: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+            shape = RoundedCornerShape(18.dp),
+            color = Color.White,
+            shadowElevation = 12.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "Turn off continuous monitoring?",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF111827),
+                )
+                Text(
+                    text = "If this stays ON, ResQ keeps real-time monitoring active in the background 24/7, works with screen on/off, and remains available even when the app UI is not open.",
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    color = Color(0xFF4B5563),
+                )
+                Text(
+                    text = "This mode is designed to be battery-optimised and should not noticeably impact normal performance.",
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
+                    color = Color(0xFF6B7280),
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE5E7EB),
+                            contentColor = Color(0xFF111827),
+                        ),
+                    ) {
+                        Text("Keep On", fontWeight = FontWeight.SemiBold)
+                    }
+                    Button(
+                        onClick = onConfirmTurnOff,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFDC2626),
+                            contentColor = Color.White,
+                        ),
+                    ) {
+                        Text("Turn Off", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
         }
     }
 }

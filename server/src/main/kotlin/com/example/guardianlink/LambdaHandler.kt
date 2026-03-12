@@ -32,8 +32,8 @@ class LambdaHandler : RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResp
                     else             -> HttpResponses.notFound()
                 }
         } catch (e: Exception) {
-            context.logger.log("ERROR: ${e.stackTraceToString()}")
-            HttpResponses.internalError()
+            context.logger.log("UNHANDLED ERROR [${e::class.simpleName}]: ${e.message}\n${e.stackTraceToString()}")
+            HttpResponses.internalError("${e::class.simpleName}: ${e.message?.take(200)}")
         }
     }
 

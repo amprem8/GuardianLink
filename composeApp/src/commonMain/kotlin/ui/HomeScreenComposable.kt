@@ -29,10 +29,13 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import permissions.PermissionState
 
 /**
@@ -163,6 +168,7 @@ private fun HomeHeader(
     onSetVoiceChoice: (Boolean) -> Unit,
 ) {
     var showProfileMenu by remember { mutableStateOf(false) }
+    var showDisableMonitoringDialog by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
@@ -257,7 +263,13 @@ private fun HomeHeader(
                                 }
                                 androidx.compose.material3.Switch(
                                     checked = continuousMonitoring,
-                                    onCheckedChange = { onSetContinuousMonitoring(it) },
+                                    onCheckedChange = { enabled ->
+                                        if (continuousMonitoring && !enabled) {
+                                            showDisableMonitoringDialog = true
+                                        } else {
+                                            onSetContinuousMonitoring(enabled)
+                                        }
+                                    },
                                     colors = androidx.compose.material3.SwitchDefaults.colors(
                                         checkedThumbColor = Color.White,
                                         checkedTrackColor = Color(0xFF2563EB),
@@ -268,7 +280,14 @@ private fun HomeHeader(
                                 )
                             }
                         },
-                        onClick = { onSetContinuousMonitoring(!continuousMonitoring) },
+                        onClick = {
+                            val next = !continuousMonitoring
+                            if (!next) {
+                                showDisableMonitoringDialog = true
+                            } else {
+                                onSetContinuousMonitoring(true)
+                            }
+                        },
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
 
@@ -355,6 +374,87 @@ private fun HomeHeader(
                     )
 
                     Spacer(Modifier.height(6.dp))
+                }
+            }
+        }
+    }
+
+    if (showDisableMonitoringDialog) {
+        DisableContinuousMonitoringDialog(
+            onDismiss = { showDisableMonitoringDialog = false },
+            onConfirmTurnOff = {
+                showDisableMonitoringDialog = false
+                onSetContinuousMonitoring(false)
+            },
+        )
+    }
+}
+
+@Composable
+private fun DisableContinuousMonitoringDialog(
+    onDismiss: () -> Unit,
+    onConfirmTurnOff: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+            shape = RoundedCornerShape(18.dp),
+            color = Color.White,
+            shadowElevation = 12.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "Turn off continuous monitoring?",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF111827),
+                )
+                Text(
+                    text = "If this stays ON, ResQ keeps real-time monitoring active in the background 24/7, works with screen on/off, and remains available even when the app UI is not open.",
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    color = Color(0xFF4B5563),
+                )
+                Text(
+                    text = "This mode is designed to be battery-optimised and should not noticeably impact normal performance.",
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
+                    color = Color(0xFF6B7280),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE5E7EB),
+                            contentColor = Color(0xFF111827),
+                        ),
+                    ) {
+                        Text("Keep On", fontWeight = FontWeight.SemiBold)
+                    }
+                    Button(
+                        onClick = onConfirmTurnOff,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFDC2626),
+                            contentColor = Color.White,
+                        ),
+                    ) {
+                        Text("Turn Off", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }

@@ -3,13 +3,12 @@ package audio
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
+import io.ktor.http.content.ByteArrayContent
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
@@ -46,7 +45,8 @@ actual class VoicePhraseUploader actual constructor() {
         }
 
         if (!presignResponse.status.isSuccess()) {
-            throw Exception("Presign request failed: HTTP ${presignResponse.status.value}")
+            val errorBody = presignResponse.bodyAsText()
+            throw Exception("Presign request failed: HTTP ${presignResponse.status.value} – $errorBody")
         }
 
         val presign = json.decodeFromString<PresignResponse>(presignResponse.bodyAsText())
@@ -57,13 +57,16 @@ actual class VoicePhraseUploader actual constructor() {
 
         val audioBytes = audioFile.readBytes()
 
+        // IMPORTANT: Content-Type in the PUT MUST exactly match the value that was
+        // signed into the presigned URL ("audio/mp4"). Using ByteArrayContent ensures
+        // Ktor sets the header correctly without any charset suffix.
         val s3Response = client.put(presign.uploadUrl) {
-            header(HttpHeaders.ContentType, "audio/mp4")
-            setBody(audioBytes)
+            setBody(ByteArrayContent(audioBytes, ContentType.parse("audio/mp4")))
         }
 
         if (!s3Response.status.isSuccess()) {
-            throw Exception("S3 upload failed: HTTP ${s3Response.status.value}")
+            val errorBody = s3Response.bodyAsText()
+            throw Exception("S3 upload failed: HTTP ${s3Response.status.value} – $errorBody")
         }
 
         return presign.s3Key

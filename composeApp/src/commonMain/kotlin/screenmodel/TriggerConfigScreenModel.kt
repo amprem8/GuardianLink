@@ -53,12 +53,14 @@ class TriggerConfigScreenModel : ScreenModel {
     val uploadState = _uploadState.asStateFlow()
 
     // ── Recording constants ──────────────────────────────────
-    // Hard cap: 3 s (a keyword like "Alert" takes < 1 s)
-    private val MAX_RECORDING_MS   = 3_000L
-    // After voice is detected, wait 600 ms of tail then stop
-    private val TAIL_AFTER_VOICE_MS = 600L
-    // RMS level above this = voice detected (0..1 scale from recorder)
-    private val VOICE_THRESHOLD    = 0.15f
+    // Hard cap: 5 s (gives enough time for longer phrases)
+    private val MAX_RECORDING_MS    = 5_000L
+    // After voice activity ends, wait 1.2 s of silence then stop
+    // (ensures the tail of short words like "Alert" is captured)
+    private val TAIL_AFTER_VOICE_MS = 1_200L
+    // Bass RMS level above this = voice activity detected (0..1 scale from recorder)
+    // onPitch emits Hz values (60–1000), NOT a 0–1 level — use onBass for VAD instead
+    private val VOICE_THRESHOLD     = 0.10f
 
     private var recorder: VoicePhraseRecorder? = null
     private var recordingTimerJob: Job? = null
@@ -102,22 +104,24 @@ class TriggerConfigScreenModel : ScreenModel {
         recorder = VoicePhraseRecorder()
         recorder!!.start(
             outputPath = outputPath,
-            // onPitch carries the audio level (0..1) from the recorder
-            onPitch = { level ->
-                if (!voiceDetected && level >= VOICE_THRESHOLD) {
+            onPitch    = { /* pitch (Hz) – not used for VAD */ },
+            // onBass emits normalised RMS (0..1) — correct signal for voice-activity detection
+            onBass = { bassLevel ->
+                if (bassLevel >= VOICE_THRESHOLD) {
                     voiceDetected = true
-                    // Voice detected → wait tail then stop
+                    // Reset the tail timer on every active frame so we don't cut off
+                    // while the user is still speaking
+                    voiceDetectedJob?.cancel()
                     voiceDetectedJob = screenModelScope.launch {
                         delay(TAIL_AFTER_VOICE_MS)
                         stopAndUpload()
                     }
                 }
             },
-            onBass = { /* unused */ },
         )
         _isRecording.value = true
 
-        // Hard-cap timer: stop after 3 s no matter what
+        // Hard-cap timer: stop after MAX_RECORDING_MS no matter what
         recordingTimerJob = screenModelScope.launch {
             delay(MAX_RECORDING_MS)
             stopAndUpload()

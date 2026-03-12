@@ -39,14 +39,9 @@ object VoiceUploadHandler {
             if (req.username.isBlank()) return HttpResponses.badRequest("username is required")
             if (req.phrase.isBlank())   return HttpResponses.badRequest("phrase is required")
 
-            val uploadUrl = S3PresignClient.presignPutUrl(req.username, req.phrase)
-
-            // Reconstruct the key the same way S3PresignClient does (mirror sanitise logic)
-            val safeUsername = req.username.trim().replace(" ", "_")
-                .replace(Regex("[^A-Za-z0-9_\\-]"), "").lowercase().take(64).ifEmpty { "unknown" }
-            val safePhrase = req.phrase.trim().replace(" ", "_")
-                .replace(Regex("[^A-Za-z0-9_\\-]"), "").lowercase().take(64).ifEmpty { "unknown" }
-            val s3Key = "voice-phrases/$safeUsername/$safePhrase/audio.m4a"
+            // presignPutUrl returns the URL AND internally builds the key — retrieve both via the
+            // dedicated method so we never duplicate the sanitise logic.
+            val (uploadUrl, s3Key) = S3PresignClient.presignPutUrlWithKey(req.username, req.phrase)
 
             val responseBody = json.encodeToString(
                 PresignResponse.serializer(),
@@ -55,7 +50,10 @@ object VoiceUploadHandler {
             HttpResponses.ok(responseBody)
 
         } catch (e: Exception) {
-            HttpResponses.internalError()
+            // Log the real cause so it appears in CloudWatch Logs
+            System.err.println("VoiceUploadHandler error: ${e::class.simpleName}: ${e.message}")
+            e.printStackTrace()
+            HttpResponses.internalError("Presign failed: ${e::class.simpleName} – ${e.message?.take(200)}")
         }
     }
 }
