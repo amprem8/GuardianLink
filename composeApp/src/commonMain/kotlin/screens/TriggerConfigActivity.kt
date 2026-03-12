@@ -27,6 +27,7 @@ class TriggerConfigActivity : Screen {
         val isRecording     by model.isRecording.collectAsState()
         val error           by model.error.collectAsState()
         val uploadState     by model.uploadState.collectAsState()
+        val gestureTestState by model.gestureTestState.collectAsState()
 
         val state = TriggerConfigUiState(
             voicePhrase      = voicePhrase,
@@ -37,6 +38,7 @@ class TriggerConfigActivity : Screen {
             error            = error,
             isValid          = model.isValid,
             uploadState      = uploadState,
+            gestureTestState = gestureTestState,
         )
 
         val actions = TriggerConfigActions(
@@ -49,6 +51,9 @@ class TriggerConfigActivity : Screen {
             onStopRecording      = model::stopRecording,
             onDismissError       = model::dismissError,
             onDismissUploadError = model::dismissUploadState,
+            onStartGestureTest   = model::startGestureTest,
+            onStopGestureTest    = model::stopGestureTest,
+            onDismissGestureError = model::dismissGestureTestError,
             onSave = {
                 if (model.save()) navigator?.replaceAll(HomeScreenActivity())
             },

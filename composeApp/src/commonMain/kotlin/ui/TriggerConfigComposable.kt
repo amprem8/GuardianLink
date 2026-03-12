@@ -71,6 +71,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import screenmodel.PRESET_PHRASES
+import screenmodel.GestureTestState
 import screenmodel.UploadState
 
 // ── Data classes ──────────────────────────────────────────────
@@ -84,6 +85,7 @@ data class TriggerConfigUiState(
     val error: String,
     val isValid: Boolean,
     val uploadState: UploadState = UploadState.Idle,
+    val gestureTestState: GestureTestState = GestureTestState.Idle,
 )
 
 data class TriggerConfigActions(
@@ -96,6 +98,9 @@ data class TriggerConfigActions(
     val onStopRecording: () -> Unit,
     val onDismissError: () -> Unit,
     val onDismissUploadError: () -> Unit,
+    val onStartGestureTest: () -> Unit,
+    val onStopGestureTest: () -> Unit,
+    val onDismissGestureError: () -> Unit,
     val onSave: () -> Unit,
     val onBack: () -> Unit,
 )
@@ -148,7 +153,14 @@ fun TriggerConfigScreen(
                     color = Color(0xFF6B7280), fontSize = 14.sp, lineHeight = 20.sp,
                 )
                 VoiceCommandCard(state, actions)
-                GestureCard(state.gestureType, actions.onSetGestureType)
+                GestureCard(
+                    gestureType = state.gestureType,
+                    gestureTestState = state.gestureTestState,
+                    onSetGestureType = actions.onSetGestureType,
+                    onStartGestureTest = actions.onStartGestureTest,
+                    onStopGestureTest = actions.onStopGestureTest,
+                    onDismissGestureError = actions.onDismissGestureError,
+                )
                 Spacer(Modifier.height(8.dp))
             }
         }
@@ -507,7 +519,14 @@ private fun RecordingIndicator(onStop: () -> Unit) {
 // ── Gesture Card ──────────────────────────────────────────────
 
 @Composable
-private fun GestureCard(gestureType: String, onSetGestureType: (String) -> Unit) {
+private fun GestureCard(
+    gestureType: String,
+    gestureTestState: GestureTestState,
+    onSetGestureType: (String) -> Unit,
+    onStartGestureTest: () -> Unit,
+    onStopGestureTest: () -> Unit,
+    onDismissGestureError: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -538,6 +557,81 @@ private fun GestureCard(gestureType: String, onSetGestureType: (String) -> Unit)
 
         Spacer(Modifier.height(16.dp))
 
+        when (val test = gestureTestState) {
+            is GestureTestState.Listening -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFEFF6FF), RoundedCornerShape(10.dp))
+                        .border(1.dp, Color(0xFFBFDBFE), RoundedCornerShape(10.dp))
+                        .padding(12.dp),
+                ) {
+                    Text(
+                        "Listening for ${gestureLabel(test.gestureType)}... perform the gesture now.",
+                        color = Color(0xFF1E40AF), fontSize = 13.sp, lineHeight = 18.sp,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+
+            is GestureTestState.Success -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFF0FDF4), RoundedCornerShape(10.dp))
+                        .border(1.dp, Color(0xFFBBF7D0), RoundedCornerShape(10.dp))
+                        .padding(12.dp),
+                ) {
+                    Text(
+                        "${test.message} ✓",
+                        color = Color(0xFF15803D), fontSize = 13.sp, lineHeight = 18.sp,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+
+            is GestureTestState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFFEF2F2), RoundedCornerShape(10.dp))
+                        .border(1.dp, Color(0xFFFECACA), RoundedCornerShape(10.dp))
+                        .padding(12.dp),
+                ) {
+                    Text(
+                        test.message,
+                        color = Color(0xFFB91C1C), fontSize = 13.sp, lineHeight = 18.sp,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+
+            GestureTestState.Idle -> Unit
+        }
+
+        Button(
+            onClick = {
+                if (gestureTestState is GestureTestState.Listening) onStopGestureTest()
+                else {
+                    onDismissGestureError()
+                    onStartGestureTest()
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (gestureTestState is GestureTestState.Listening) Color(0xFFDC2626) else Color(0xFF2563EB)
+            ),
+        ) {
+            Text(
+                text = if (gestureTestState is GestureTestState.Listening) "Stop Gesture Test" else "Test Selected Gesture",
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -551,6 +645,14 @@ private fun GestureCard(gestureType: String, onSetGestureType: (String) -> Unit)
             )
         }
     }
+}
+
+private fun gestureLabel(type: String): String = when (type) {
+    "double-tap" -> "Back Tap (Double)"
+    "triple-tap" -> "Back Tap (Triple)"
+    "shake" -> "Device Shake"
+    "volume-triple-down" -> "Volume Down x3"
+    else -> type
 }
 
 @Composable

@@ -3,13 +3,18 @@ package com.example.guardianlink
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.ActivityManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import gesture.GestureDetectionEngine
+import storage.AppStorage
+import storage.TriggerConfigStorage
 
 /**
  * Foreground service that keeps the SOS gesture + voice trigger listener alive
@@ -27,10 +32,14 @@ class SOSForegroundService : Service() {
     companion object {
         const val CHANNEL_ID = "sos_listener_channel"
         const val NOTIFICATION_ID = 1001
+        private const val TAG = "SOSForegroundService"
     }
 
     override fun onCreate() {
         super.onCreate()
+        AppStorage.init(this)
+        TriggerConfigStorage.init(this)
+        GestureDetectionEngine.init(this)
         createNotificationChannel()
     }
 
@@ -50,7 +59,22 @@ class SOSForegroundService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
 
-        // TODO Phase 2: Start gesture detection + voice listener here
+        if (!AppStorage.isContinuousMonitoring()) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        val selectedGesture = TriggerConfigStorage.loadConfig().gestureType
+        GestureDetectionEngine.init(this)
+        val started = GestureDetectionEngine.start(selectedGesture) {
+            if (isAppInForeground()) return@start
+            Log.i(TAG, "Gesture detected in continuous monitoring mode: $selectedGesture")
+            // TODO: Wire into full SOS pipeline trigger.
+        }
+
+        if (!started) {
+            Log.w(TAG, "Gesture engine unavailable for selected gesture: $selectedGesture")
+        }
 
         return START_STICKY // Restart if killed by system
     }
@@ -58,8 +82,16 @@ class SOSForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        GestureDetectionEngine.stop()
         super.onDestroy()
         // TODO Phase 2: Stop gesture detection + voice listener here
+    }
+
+    private fun isAppInForeground(): Boolean {
+        val proc = ActivityManager.RunningAppProcessInfo()
+        ActivityManager.getMyMemoryState(proc)
+        return proc.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND ||
+                proc.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE
     }
 
     private fun createNotificationChannel() {

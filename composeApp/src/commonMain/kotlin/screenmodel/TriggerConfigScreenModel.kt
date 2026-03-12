@@ -4,6 +4,7 @@ import audio.VoicePhraseRecorder
 import audio.VoicePhraseUploader
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import gesture.GestureDetectionEngine
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,13 @@ sealed class UploadState {
     object Uploading : UploadState()
     data class Success(val s3Key: String) : UploadState()
     data class Error(val message: String) : UploadState()
+}
+
+sealed class GestureTestState {
+    object Idle : GestureTestState()
+    data class Listening(val gestureType: String) : GestureTestState()
+    data class Success(val gestureType: String, val message: String) : GestureTestState()
+    data class Error(val message: String) : GestureTestState()
 }
 
 class TriggerConfigScreenModel : ScreenModel {
@@ -51,6 +59,9 @@ class TriggerConfigScreenModel : ScreenModel {
 
     private val _uploadState     = MutableStateFlow<UploadState>(UploadState.Idle)
     val uploadState = _uploadState.asStateFlow()
+
+    private val _gestureTestState = MutableStateFlow<GestureTestState>(GestureTestState.Idle)
+    val gestureTestState = _gestureTestState.asStateFlow()
 
     // ── Recording constants ──────────────────────────────────
     // Hard cap: 5 s (gives enough time for longer phrases)
@@ -80,13 +91,66 @@ class TriggerConfigScreenModel : ScreenModel {
     // ── Setters ──────────────────────────────────────────────
 
     fun setVoicePhrase(phrase: String)       { _voicePhrase.value = phrase }
-    fun setGestureType(type: String)         { _gestureType.value = type }
+    fun setGestureType(type: String) {
+        _gestureType.value = type
+        if (_gestureTestState.value is GestureTestState.Listening) {
+            startGestureTest()
+        }
+    }
     fun setUseCustomPhrase(custom: Boolean)  { _useCustomPhrase.value = custom }
     fun setCustomPhrase(phrase: String)      { _customPhrase.value = phrase }
 
     fun refreshPhrase() {
         val available = PRESET_PHRASES.filter { it != _voicePhrase.value }
         if (available.isNotEmpty()) _voicePhrase.value = available.random()
+    }
+
+    fun startGestureTest() {
+        if (!AppStorage.isContinuousMonitoring()) {
+            _gestureTestState.value = GestureTestState.Error(
+                "Continuous Monitoring is OFF. Turn it ON to enable gesture detection."
+            )
+            return
+        }
+
+        GestureDetectionEngine.stop()
+
+        val selected = _gestureType.value
+        val started = GestureDetectionEngine.start(selected) { detectedGesture ->
+            _gestureTestState.value = GestureTestState.Success(
+                gestureType = detectedGesture,
+                message = "Gesture detected successfully: ${gestureLabel(detectedGesture)}",
+            )
+            screenModelScope.launch {
+                delay(1400)
+                if (_gestureTestState.value is GestureTestState.Success) {
+                    _gestureTestState.value = GestureTestState.Listening(_gestureType.value)
+                }
+            }
+        }
+
+        _gestureTestState.value = if (started) {
+            GestureTestState.Listening(selected)
+        } else {
+            GestureTestState.Error(
+                if (selected == "volume-triple-down") {
+                    "Volume triple-down is unavailable on this platform for live testing."
+                } else {
+                    "Gesture sensors unavailable on this device."
+                }
+            )
+        }
+    }
+
+    fun stopGestureTest() {
+        GestureDetectionEngine.stop()
+        _gestureTestState.value = GestureTestState.Idle
+    }
+
+    fun dismissGestureTestError() {
+        if (_gestureTestState.value is GestureTestState.Error) {
+            _gestureTestState.value = GestureTestState.Idle
+        }
     }
 
     // ── Recording ────────────────────────────────────────────
@@ -223,10 +287,19 @@ class TriggerConfigScreenModel : ScreenModel {
     }
 
     override fun onDispose() {
+        GestureDetectionEngine.stop()
         recordingTimerJob?.cancel()
         voiceDetectedJob?.cancel()
         recorder?.release()
         recorder = null
         super.onDispose()
+    }
+
+    private fun gestureLabel(type: String): String = when (type) {
+        "double-tap" -> "Back Tap (Double)"
+        "triple-tap" -> "Back Tap (Triple)"
+        "shake" -> "Device Shake"
+        "volume-triple-down" -> "Volume Down x3"
+        else -> type
     }
 }
