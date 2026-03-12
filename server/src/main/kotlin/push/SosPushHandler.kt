@@ -1,0 +1,170 @@
+package push
+
+import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent
+import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse
+import com.example.guardianlink.HttpResponses
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import java.util.UUID
+
+object SosPushHandler {
+
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+
+    @Serializable
+    data class SosPushRequest(
+        val victimUserId: String,
+        val victimName: String,
+        val contacts: List<SosContactTarget>,
+        val location: SosLocationContext? = null,
+        val message: String? = null,
+    )
+
+    @Serializable
+    data class SosContactTarget(
+        val contactName: String,
+        val phoneNumber: String? = null,
+        val endpointArn: String,
+        val includeGPS: Boolean = false,
+    )
+
+    @Serializable
+    data class SosLocationContext(
+        val permissionGranted: Boolean = false,
+        val gpsEnabled: Boolean = false,
+        val lat: Double? = null,
+        val lng: Double? = null,
+    )
+
+    @Serializable
+    data class ContactPublishResult(
+        val contactName: String,
+        val published: Boolean,
+        val messageId: String? = null,
+        val error: String? = null,
+        val locationIncluded: Boolean = false,
+    )
+
+    @Serializable
+    data class SosPushResponse(
+        val sosId: String,
+        val sentCount: Int,
+        val failedCount: Int,
+        val allPublished: Boolean,
+        val results: List<ContactPublishResult>,
+    )
+
+    private val phoneEndpointMap: Map<String, String> by lazy {
+        val raw = System.getenv("SOS_PHONE_ENDPOINT_MAP_JSON").orEmpty().trim()
+        if (raw.isEmpty()) return@lazy emptyMap()
+
+        runCatching {
+            json.parseToJsonElement(raw).jsonObject.mapNotNull { (k, v) ->
+                val normalized = normalizePhone(k)
+                val endpoint = runCatching { v.jsonPrimitive.content }.getOrDefault("").trim()
+                if (normalized.isNotEmpty() && endpoint.isNotEmpty()) normalized to endpoint else null
+            }.toMap()
+        }.getOrDefault(emptyMap())
+    }
+
+    fun handle(event: APIGatewayV2HTTPEvent): APIGatewayV2HTTPResponse {
+        return try {
+            val body = event.body ?: return HttpResponses.badRequest("Missing request body")
+            val req = json.decodeFromString(SosPushRequest.serializer(), body)
+
+            if (req.victimUserId.isBlank()) return HttpResponses.badRequest("victimUserId is required")
+            if (req.victimName.isBlank()) return HttpResponses.badRequest("victimName is required")
+            if (req.contacts.isEmpty()) return HttpResponses.badRequest("contacts is required")
+
+            val sosId = UUID.randomUUID().toString()
+            val baseBody = req.message?.takeIf { it.isNotBlank() }
+                ?: "${req.victimName} triggered SOS emergency alert"
+
+            val results = req.contacts.map { contact ->
+                val resolvedEndpointArn = resolveEndpointArn(contact)
+                if (resolvedEndpointArn.isBlank()) {
+                    return@map ContactPublishResult(
+                        contactName = contact.contactName,
+                        published = false,
+                        error = "Missing endpointArn/phone mapping",
+                    )
+                }
+
+                val shouldIncludeLocation = contact.includeGPS &&
+                        req.location?.permissionGranted == true &&
+                        req.location.gpsEnabled &&
+                        req.location.lat != null &&
+                        req.location.lng != null
+
+                val payload = mutableMapOf(
+                    "type" to "SOS_ALERT",
+                    "sosId" to sosId,
+                    "victimUserId" to req.victimUserId,
+                    "victimName" to req.victimName,
+                )
+
+                if (shouldIncludeLocation) {
+                    payload["lat"] = req.location.lat.toString()
+                    payload["lng"] = req.location.lng.toString()
+                }
+
+                try {
+                    val messageId = SnsPushClient.publishSos(
+                        endpointArn = resolvedEndpointArn,
+                        title = "SOS Alert",
+                        body = baseBody,
+                        data = payload,
+                    )
+                    ContactPublishResult(
+                        contactName = contact.contactName,
+                        published = true,
+                        messageId = messageId,
+                        locationIncluded = shouldIncludeLocation,
+                    )
+                } catch (e: Exception) {
+                    ContactPublishResult(
+                        contactName = contact.contactName,
+                        published = false,
+                        error = e::class.simpleName ?: "PublishError",
+                        locationIncluded = shouldIncludeLocation,
+                    )
+                }
+            }
+
+            val sent = results.count { it.published }
+            val failed = results.size - sent
+
+            val resp = SosPushResponse(
+                sosId = sosId,
+                sentCount = sent,
+                failedCount = failed,
+                allPublished = failed == 0,
+                results = results,
+            )
+
+            HttpResponses.ok(json.encodeToString(resp))
+        } catch (e: Exception) {
+            HttpResponses.internalError("SOS push failed: ${e::class.simpleName}")
+        }
+    }
+
+    private fun resolveEndpointArn(contact: SosContactTarget): String {
+        val direct = contact.endpointArn.trim()
+        if (direct.isNotEmpty()) return direct
+
+        val normalizedPhone = normalizePhone(contact.phoneNumber.orEmpty())
+        if (normalizedPhone.isEmpty()) return ""
+
+        return phoneEndpointMap[normalizedPhone].orEmpty()
+    }
+
+    private fun normalizePhone(raw: String): String {
+        val digits = raw.filter { it.isDigit() }
+        if (digits.isEmpty()) return ""
+        return if (digits.length > 10) digits.takeLast(10) else digits
+    }
+}
+
+

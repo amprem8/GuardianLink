@@ -1,6 +1,7 @@
 package com.example.guardianlink
 
 import auth.OtpRoutes
+import push.SosPushHandler
 import voice.VoiceUploadHandler
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
@@ -29,6 +30,7 @@ class LambdaHandler : RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResp
                     "/otp/send"      -> OtpRoutes.sendOtp(request)
                     "/otp/verify"    -> OtpRoutes.verifyOtp(request)
                     "/voice/presign" -> VoiceUploadHandler.handlePresign(request)
+                    "/sos/push"      -> SosPushHandler.handle(request)
                     else             -> HttpResponses.notFound()
                 }
         } catch (e: Exception) {

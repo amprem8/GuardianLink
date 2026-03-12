@@ -127,6 +127,7 @@ class TriggerConfigScreenModel : ScreenModel {
                     _gestureTestState.value = GestureTestState.Listening(_gestureType.value)
                 }
             }
+            true
         }
 
         _gestureTestState.value = if (started) {

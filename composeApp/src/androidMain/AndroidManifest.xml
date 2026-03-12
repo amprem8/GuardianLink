@@ -69,6 +69,14 @@
             android:foregroundServiceType="location|microphone"
             tools:node="merge" />
 
+        <service
+            android:name=".ResqFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".MonitoringBootReceiver"
             android:enabled="true"

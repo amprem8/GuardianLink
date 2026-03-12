@@ -20,7 +20,7 @@ actual object GestureDetectionEngine {
     private val queue: NSOperationQueue = NSOperationQueue.mainQueue()
 
     private var activeGesture: String = ""
-    private var onDetected: ((String) -> Unit)? = null
+    private var onDetected: ((String) -> Boolean)? = null
 
     private val tapTimestamps = ArrayDeque<Long>()
     private val shakeEvents = ArrayDeque<Pair<Long, Int>>()
@@ -29,7 +29,7 @@ actual object GestureDetectionEngine {
     private var noiseFloor = 0.6f
     private var cooldownUntil = 0L
 
-    actual fun start(gestureType: String, onDetected: (String) -> Unit): Boolean {
+    actual fun start(gestureType: String, onDetected: (String) -> Boolean): Boolean {
         stop()
 
         activeGesture = gestureType
@@ -148,11 +148,12 @@ actual object GestureDetectionEngine {
     private fun emitDetected() {
         cooldownUntil = nowMs() + 1800L
 
-        val generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        generator.notificationOccurred(UINotificationFeedbackType.UINotificationFeedbackTypeSuccess)
-
-        onDetected?.invoke(activeGesture)
+        val shouldAcknowledge = onDetected?.invoke(activeGesture) ?: true
+        if (shouldAcknowledge) {
+            val generator = UINotificationFeedbackGenerator()
+            generator.prepare()
+            generator.notificationOccurred(UINotificationFeedbackType.UINotificationFeedbackTypeSuccess)
+        }
     }
 
     private fun trimOld(queue: ArrayDeque<Long>, minTimestamp: Long) {

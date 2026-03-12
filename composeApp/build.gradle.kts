@@ -30,6 +30,7 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation("androidx.security:security-crypto:1.1.0")
+            implementation("com.google.firebase:firebase-messaging:24.0.1")
             // Ktor HTTP client engine + plugins for Android (voice upload)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.ktor.client.content.negotiation)

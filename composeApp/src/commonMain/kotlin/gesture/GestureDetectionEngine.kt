@@ -14,7 +14,7 @@ expect object GestureDetectionEngine {
      *
      * @return true when listener starts successfully, false when unavailable.
      */
-    fun start(gestureType: String, onDetected: (String) -> Unit): Boolean
+    fun start(gestureType: String, onDetected: (String) -> Boolean): Boolean
 
     /** Stop listening and release resources. */
     fun stop()

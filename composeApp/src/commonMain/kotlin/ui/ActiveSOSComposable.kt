@@ -115,6 +115,7 @@ fun ActiveSOSScreen(
     contacts: List<EmergencyContact>,
     isOnline: Boolean,
     safePin: String = "",
+    stopTimer: Boolean = false,
     onCancel: () -> Unit,
 ) {
     var sosStatus by remember { mutableStateOf(SOSStatus.DETECTING) }
@@ -128,8 +129,8 @@ fun ActiveSOSScreen(
     var nearbyDevices by remember { mutableStateOf<List<NearbyBLEDevice>>(emptyList()) }
 
     // ── Elapsed timer ──
-    LaunchedEffect(Unit) {
-        while (true) {
+    LaunchedEffect(stopTimer) {
+        while (!stopTimer) {
             delay(1000)
             elapsedTime++
         }

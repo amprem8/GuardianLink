@@ -67,9 +67,10 @@ class SOSForegroundService : Service() {
         val selectedGesture = TriggerConfigStorage.loadConfig().gestureType
         GestureDetectionEngine.init(this)
         val started = GestureDetectionEngine.start(selectedGesture) {
-            if (isAppInForeground()) return@start
+            if (isAppInForeground()) return@start false
             Log.i(TAG, "Gesture detected in continuous monitoring mode: $selectedGesture")
             // TODO: Wire into full SOS pipeline trigger.
+            true
         }
 
         if (!started) {

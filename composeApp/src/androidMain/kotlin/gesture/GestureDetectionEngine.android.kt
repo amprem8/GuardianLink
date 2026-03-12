@@ -26,7 +26,7 @@ actual object GestureDetectionEngine {
     private var gyroscope: Sensor? = null
 
     private var activeGesture: String = ""
-    private var onDetected: ((String) -> Unit)? = null
+    private var onDetected: ((String) -> Boolean)? = null
 
     private var isStarted = false
     private var latestGyroMagnitude = 0f
@@ -48,7 +48,7 @@ actual object GestureDetectionEngine {
         gyroscope = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
     }
 
-    actual fun start(gestureType: String, onDetected: (String) -> Unit): Boolean {
+    actual fun start(gestureType: String, onDetected: (String) -> Boolean): Boolean {
         if (!::appContext.isInitialized) return false
 
         stop()
@@ -203,8 +203,10 @@ actual object GestureDetectionEngine {
         if (now < cooldownUntil) return
 
         cooldownUntil = now + 1800L
-        vibrateSuccess()
-        onDetected?.invoke(activeGesture)
+        val shouldAcknowledge = onDetected?.invoke(activeGesture) ?: true
+        if (shouldAcknowledge) {
+            vibrateSuccess()
+        }
     }
 
     private fun resetState() {
