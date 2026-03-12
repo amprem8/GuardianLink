@@ -865,7 +865,7 @@ private fun CancelPinDialog(
                         disabledContainerColor = Color(0xFFD1D5DB),
                     ),
                 ) {
-                    Text("Confirm Safe", color = Color.White, fontWeight = FontWeight.Medium)
+                    Text("Confirm", color = Color.White, fontWeight = FontWeight.Medium)
                 }
             }
 

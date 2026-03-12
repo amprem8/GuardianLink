@@ -54,6 +54,9 @@ actual object AppStorage {
     actual fun logout() { prefs.edit().putBoolean(KEY_LOGGED_IN, false).commit() }
     actual fun clear() { prefs.edit().clear().commit() }
 
+    // ── Backend ─────────────────────────────────────────────
+    actual fun getBackendBaseUrl(): String = config.AppConfig.BASE_URL.trimEnd('/')
+
     // ── keys ────────────────────────────────────────────────
     private const val KEY_REGISTERED            = "registered"
     private const val KEY_LOGGED_IN             = "loggedIn"

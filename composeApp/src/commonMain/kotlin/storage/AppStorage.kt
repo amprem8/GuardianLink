@@ -55,4 +55,12 @@ expect object AppStorage {
 
     /** Wipe ALL persisted data (full reset, e.g. uninstall-equivalent). */
     fun clear()
+
+    // ── Backend ─────────────────────────────────────────────
+
+    /**
+     * Base URL of the ResQ backend (e.g. "https://api.resq.example.com").
+     * Stored so it can be configured once and reused across the app.
+     */
+    fun getBackendBaseUrl(): String
 }

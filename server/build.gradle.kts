@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation("software.amazon.awssdk:sns:2.41.20")
+    implementation("software.amazon.awssdk:s3:2.42.11")
 
     // AWS SDK for DynamoDB
     implementation(libs.dynamodb)

@@ -30,6 +30,11 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation("androidx.security:security-crypto:1.1.0")
+            // Ktor HTTP client engine + plugins for Android (voice upload)
+            implementation(libs.ktor.client.okhttp)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -47,8 +52,10 @@ kotlin {
             implementation(libs.voyager.screenmodel)
 
             implementation(libs.kotlinx.coroutines.core)
-
             implementation(libs.kotlinx.serialization.json)
+
+            // Ktor HTTP client core only (engine added per-platform)
+            implementation(libs.ktor.client.core)
 
             implementation(projects.shared)
         }

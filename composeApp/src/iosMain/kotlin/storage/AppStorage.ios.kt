@@ -68,6 +68,9 @@ actual object AppStorage {
         defaults.synchronize()
     }
 
+    // ── Backend ─────────────────────────────────────────────
+    actual fun getBackendBaseUrl(): String = config.AppConfig.BASE_URL.trimEnd('/')
+
     // ── keys ────────────────────────────────────────────────
     private const val KEY_REGISTERED            = "registered"
     private const val KEY_LOGGED_IN             = "loggedIn"
