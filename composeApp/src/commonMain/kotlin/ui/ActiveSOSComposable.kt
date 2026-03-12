@@ -114,6 +114,7 @@ data class NearbyBLEDevice(
 fun ActiveSOSScreen(
     contacts: List<EmergencyContact>,
     isOnline: Boolean,
+    safePin: String = "",
     onCancel: () -> Unit,
 ) {
     var sosStatus by remember { mutableStateOf(SOSStatus.DETECTING) }
@@ -394,6 +395,7 @@ fun ActiveSOSScreen(
         // ── Cancel confirmation overlay ──
         if (showCancelDialog) {
             CancelPinDialog(
+                safePin = safePin,
                 onDismiss = { showCancelDialog = false },
                 onConfirm = onCancel,
             )
@@ -765,10 +767,13 @@ private fun BLEDeviceRow(device: NearbyBLEDevice) {
 
 @Composable
 private fun CancelPinDialog(
+    safePin: String,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
     var pin by remember { mutableStateOf("") }
+    var pinError by remember { mutableStateOf("") }
+    val pinNotSet = safePin.isEmpty()
 
     Box(
         modifier = Modifier
@@ -795,7 +800,10 @@ private fun CancelPinDialog(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                "Enter your 4-digit PIN to confirm you are safe and cancel the alert.",
+                if (pinNotSet)
+                    "Enter any 4-digit PIN to confirm you are safe (no PIN configured)."
+                else
+                    "Enter your Safe PIN to confirm you are safe and cancel the alert.",
                 color = Color(0xFF6B7280),
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
@@ -806,14 +814,25 @@ private fun CancelPinDialog(
 
             OutlinedTextField(
                 value = pin,
-                onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pin = it },
+                onValueChange = {
+                    if (it.length <= 4 && it.all { c -> c.isDigit() }) {
+                        pin = it
+                        pinError = ""
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                 placeholder = { Text("Enter 4-digit PIN", color = Color(0xFFD1D5DB)) },
                 singleLine = true,
+                isError = pinError.isNotEmpty(),
             )
+
+            if (pinError.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                Text(pinError, color = Color(0xFFDC2626), fontSize = 13.sp, textAlign = TextAlign.Center)
+            }
 
             Spacer(Modifier.height(20.dp))
 
@@ -831,7 +850,13 @@ private fun CancelPinDialog(
                 }
 
                 Button(
-                    onClick = { if (pin.length == 4) onConfirm() },
+                    onClick = {
+                        when {
+                            pin.length != 4 -> pinError = "Please enter a 4-digit PIN"
+                            !pinNotSet && pin != safePin -> pinError = "Incorrect PIN. Try again."
+                            else -> onConfirm()
+                        }
+                    },
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(12.dp),
                     enabled = pin.length == 4,
@@ -844,13 +869,16 @@ private fun CancelPinDialog(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            Text(
-                "For demo: use any 4-digit PIN",
-                color = Color(0xFF9CA3AF),
-                fontSize = 12.sp,
-            )
+            if (pinNotSet) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Set a Safe PIN in your Profile page for better security.",
+                    color = Color(0xFF9CA3AF),
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 16.sp,
+                )
+            }
         }
     }
 }

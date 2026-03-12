@@ -587,12 +587,32 @@ private fun GestureCard(gestureType: String, onSetGestureType: (String) -> Unit)
 
         Spacer(Modifier.height(10.dp))
 
+        // ── Triple-tap option ──
+        GestureOption(
+            title = "Back Tap (Triple)",
+            description = "Tap the back of your phone three times rapidly",
+            isSelected = gestureType == "triple-tap",
+            onClick = { onSetGestureType("triple-tap") },
+        )
+
+        Spacer(Modifier.height(10.dp))
+
         // ── Shake option ──
         GestureOption(
             title = "Device Shake",
             description = "Shake your phone vigorously",
             isSelected = gestureType == "shake",
             onClick = { onSetGestureType("shake") },
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        // ── Volume triple down option ──
+        GestureOption(
+            title = "Volume Down ×3",
+            description = "Press the volume down button three times rapidly",
+            isSelected = gestureType == "volume-triple-down",
+            onClick = { onSetGestureType("volume-triple-down") },
         )
 
         Spacer(Modifier.height(16.dp))

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import model.DeviceContact
 import model.EmergencyContact
+import storage.AppStorage
 import storage.ContactStorage
 import kotlin.random.Random
 
@@ -38,6 +39,10 @@ class EmergencyContactsScreenModel : ScreenModel {
 
     val canContinue: Boolean get() = _contacts.value.size >= MIN_CONTACTS
 
+    // Verified phone (last 10 digits) — used to block user's own number
+    private val verifiedDigits: String
+        get() = AppStorage.getPhoneNumber().replace("\\D".toRegex(), "").takeLast(10)
+
     // ── Actions ─────────────────────────────────────────────
 
     fun setShowAddDialog(show: Boolean) {
@@ -50,17 +55,27 @@ class EmergencyContactsScreenModel : ScreenModel {
     /** Add a contact from manual entry (validates Indian phone). */
     fun addContact(name: String, phone: String) {
         if (name.isBlank()) { _error.value = "Please enter contact name"; return }
+        if (name.length > 10) { _error.value = "Name must be 10 characters or less"; return }
         if (phone.isBlank()) { _error.value = "Please enter phone number"; return }
-        if (!isValidIndianPhone(phone)) {
+        val cleanedPhone = phone.replace("\\D".toRegex(), "")
+        if (cleanedPhone.length != 10) {
+            _error.value = "Phone number must be exactly 10 digits"
+            return
+        }
+        if (!isValidIndianPhone(cleanedPhone)) {
             _error.value = "Please enter a valid Indian mobile number (10 digits starting with 6-9)"
+            return
+        }
+        val vd = verifiedDigits
+        if (vd.isNotEmpty() && cleanedPhone.takeLast(10) == vd) {
+            _error.value = "Your verified number cannot be added as an emergency contact"
             return
         }
         if (_contacts.value.size >= MAX_CONTACTS) {
             _error.value = "Maximum $MAX_CONTACTS contacts allowed"
             return
         }
-        // Check duplicate by normalized digits
-        val formatted = formatIndianPhone(phone)
+        val formatted = formatIndianPhone(cleanedPhone)
         if (_contacts.value.any { normalizeToDigits(it.phone) == normalizeToDigits(formatted) }) {
             _error.value = "This phone number is already added"
             return
@@ -86,10 +101,18 @@ class EmergencyContactsScreenModel : ScreenModel {
             return
         }
         val cleanedPhone = dc.phone.replace("\\D".toRegex(), "")
+        val last10 = cleanedPhone.takeLast(10)
         if (!isValidIndianPhone(cleanedPhone)) {
             _error.value = "Only Indian mobile numbers are accepted (10 digits starting with 6-9)"
             return
         }
+        val vd = verifiedDigits
+        if (vd.isNotEmpty() && last10 == vd) {
+            _error.value = "Your verified number cannot be added as an emergency contact"
+            return
+        }
+        // Truncate name if device contact name is longer than 10 chars
+        val safeName = dc.name.take(10)
         val formatted = formatIndianPhone(cleanedPhone)
         if (_contacts.value.any { normalizeToDigits(it.phone) == normalizeToDigits(formatted) }) {
             _error.value = "This phone number is already added"
@@ -97,7 +120,7 @@ class EmergencyContactsScreenModel : ScreenModel {
         }
         val contact = EmergencyContact(
             id = generateId(),
-            name = dc.name,
+            name = safeName,
             phone = formatted,
             includeGPS = true,
             includeAudio = true,

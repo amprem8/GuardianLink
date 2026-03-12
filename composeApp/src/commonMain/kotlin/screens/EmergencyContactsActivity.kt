@@ -35,6 +35,7 @@ class EmergencyContactsActivity(
             deviceContacts = deviceContacts,
             isLoadingContacts = isLoadingContacts,
             permissionState = permissionState,
+            verifiedPhone = AppStorage.getPhoneNumber(),
             onAddContact = model::addContact,
             onAddDeviceContact = model::addDeviceContact,
             onRemoveContact = model::removeContact,

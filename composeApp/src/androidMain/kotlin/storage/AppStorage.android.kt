@@ -11,7 +11,6 @@ actual object AppStorage {
     @SuppressLint("StaticFieldLeak")
     private lateinit var appContext: Context
 
-    /** Must be called once from [MainActivity.onCreate] before any composable reads. */
     fun init(context: Context) {
         appContext = context.applicationContext
     }
@@ -19,17 +18,9 @@ actual object AppStorage {
     private val prefs: SharedPreferences
         get() = appContext.getSharedPreferences("resq_prefs", Context.MODE_PRIVATE)
 
-    // ── public API ──────────────────────────────────────────
-
-    actual fun isRegistered(): Boolean =
-        prefs.getBoolean(KEY_REGISTERED, false)
-
-    actual fun isLoggedIn(): Boolean =
-        prefs.getBoolean(KEY_LOGGED_IN, false)
-
-    actual fun setLoggedIn(loggedIn: Boolean) {
-        prefs.edit().putBoolean(KEY_LOGGED_IN, loggedIn).commit()
-    }
+    actual fun isRegistered(): Boolean = prefs.getBoolean(KEY_REGISTERED, false)
+    actual fun isLoggedIn(): Boolean = prefs.getBoolean(KEY_LOGGED_IN, false)
+    actual fun setLoggedIn(loggedIn: Boolean) { prefs.edit().putBoolean(KEY_LOGGED_IN, loggedIn).commit() }
 
     actual fun markRegistered(userName: String, userEmail: String, phoneNumber: String) {
         prefs.edit()
@@ -41,36 +32,36 @@ actual object AppStorage {
             .commit()
     }
 
-    actual fun getUserName(): String =
-        prefs.getString(KEY_USER_NAME, "").orEmpty()
+    actual fun getUserName(): String = prefs.getString(KEY_USER_NAME, "").orEmpty()
+    actual fun getUserEmail(): String = prefs.getString(KEY_USER_EMAIL, "").orEmpty()
+    actual fun getPhoneNumber(): String = prefs.getString(KEY_PHONE, "").orEmpty()
 
-    actual fun getUserEmail(): String =
-        prefs.getString(KEY_USER_EMAIL, "").orEmpty()
+    actual fun isContactsConfigured(): Boolean = prefs.getBoolean(KEY_CONTACTS_CONFIGURED, false)
+    actual fun markContactsConfigured() { prefs.edit().putBoolean(KEY_CONTACTS_CONFIGURED, true).commit() }
 
-    actual fun getPhoneNumber(): String =
-        prefs.getString(KEY_PHONE, "").orEmpty()
+    // ── Safe PIN ────────────────────────────────────────────
+    actual fun getSafePin(): String = prefs.getString(KEY_SAFE_PIN, "").orEmpty()
+    actual fun setSafePin(pin: String) { prefs.edit().putString(KEY_SAFE_PIN, pin).commit() }
 
-    actual fun isContactsConfigured(): Boolean =
-        prefs.getBoolean(KEY_CONTACTS_CONFIGURED, false)
+    // ── Monitoring toggles ──────────────────────────────────
+    actual fun isContinuousMonitoring(): Boolean = prefs.getBoolean(KEY_CONTINUOUS_MONITORING, true)
+    actual fun setContinuousMonitoring(enabled: Boolean) { prefs.edit().putBoolean(KEY_CONTINUOUS_MONITORING, enabled).commit() }
 
-    actual fun markContactsConfigured() {
-        prefs.edit().putBoolean(KEY_CONTACTS_CONFIGURED, true).commit()
-    }
+    actual fun isVoiceChoice(): Boolean = prefs.getBoolean(KEY_VOICE_CHOICE, false)
+    actual fun setVoiceChoice(enabled: Boolean) { prefs.edit().putBoolean(KEY_VOICE_CHOICE, enabled).commit() }
 
-    actual fun logout() {
-        prefs.edit().putBoolean(KEY_LOGGED_IN, false).commit()
-    }
-
-    actual fun clear() {
-        prefs.edit().clear().commit()
-    }
+    // ── Session ─────────────────────────────────────────────
+    actual fun logout() { prefs.edit().putBoolean(KEY_LOGGED_IN, false).commit() }
+    actual fun clear() { prefs.edit().clear().commit() }
 
     // ── keys ────────────────────────────────────────────────
-
-    private const val KEY_REGISTERED = "registered"
-    private const val KEY_LOGGED_IN = "loggedIn"
-    private const val KEY_USER_NAME = "userName"
-    private const val KEY_USER_EMAIL = "userEmail"
-    private const val KEY_PHONE = "phoneNumber"
-    private const val KEY_CONTACTS_CONFIGURED = "contactsConfigured"
+    private const val KEY_REGISTERED            = "registered"
+    private const val KEY_LOGGED_IN             = "loggedIn"
+    private const val KEY_USER_NAME             = "userName"
+    private const val KEY_USER_EMAIL            = "userEmail"
+    private const val KEY_PHONE                 = "phoneNumber"
+    private const val KEY_CONTACTS_CONFIGURED   = "contactsConfigured"
+    private const val KEY_SAFE_PIN              = "safePin"
+    private const val KEY_CONTINUOUS_MONITORING = "continuousMonitoring"
+    private const val KEY_VOICE_CHOICE          = "voiceChoice"
 }

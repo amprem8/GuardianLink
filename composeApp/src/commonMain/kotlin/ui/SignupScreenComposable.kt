@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.outlined.Email
@@ -40,11 +42,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -70,6 +76,9 @@ fun SignupScreen(
     var agreeToTerms by remember { mutableStateOf(false) }
 
     val focusManager = LocalFocusManager.current
+    val emailFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }
+    val confirmPasswordFocusRequester = remember { FocusRequester() }
 
     Box(
         modifier = Modifier
@@ -162,29 +171,51 @@ fun SignupScreen(
                 LabeledInput(
                     label = "Full Name",
                     value = name,
-                    icon = Icons.Outlined.Person
+                    icon = Icons.Outlined.Person,
+                    keyboardConfig = KeyboardConfig(
+                        imeAction = ImeAction.Next,
+                        onImeAction = { emailFocusRequester.requestFocus() },
+                    ),
                 ) { name = it }
 
                 LabeledInput(
                     label = "Email Address",
                     value = email,
-                    icon = Icons.Outlined.Email
+                    icon = Icons.Outlined.Email,
+                    keyboardConfig = KeyboardConfig(
+                        imeAction = ImeAction.Next,
+                        keyboardType = KeyboardType.Email,
+                        focusRequester = emailFocusRequester,
+                        onImeAction = { passwordFocusRequester.requestFocus() },
+                    ),
                 ) { email = it }
 
                 PasswordInput(
                     label = "Password",
                     value = password,
                     visible = showPassword,
+                    keyboardConfig = KeyboardConfig(
+                        imeAction = ImeAction.Next,
+                        keyboardType = KeyboardType.Password,
+                        focusRequester = passwordFocusRequester,
+                        onImeAction = { confirmPasswordFocusRequester.requestFocus() },
+                    ),
                     onValueChange = { password = it },
-                    onToggle = { showPassword = !showPassword }
+                    onToggle = { showPassword = !showPassword },
                 )
 
                 PasswordInput(
                     label = "Confirm Password",
                     value = confirmPassword,
                     visible = showConfirmPassword,
+                    keyboardConfig = KeyboardConfig(
+                        imeAction = ImeAction.Done,
+                        keyboardType = KeyboardType.Password,
+                        focusRequester = confirmPasswordFocusRequester,
+                        onImeAction = { focusManager.clearFocus() },
+                    ),
                     onValueChange = { confirmPassword = it },
-                    onToggle = { showConfirmPassword = !showConfirmPassword }
+                    onToggle = { showConfirmPassword = !showConfirmPassword },
                 )
                 Spacer(Modifier.height(6.dp))
 
@@ -262,64 +293,90 @@ fun SignupScreen(
         }
     }
 }
+
+/** Groups keyboard-related config so composables stay under the 7-param limit. */
+data class KeyboardConfig(
+    val imeAction: ImeAction = ImeAction.Next,
+    val keyboardType: KeyboardType = KeyboardType.Text,
+    val focusRequester: FocusRequester? = null,
+    val onImeAction: (() -> Unit)? = null,
+)
+
 @Composable
 fun LabeledInput(
     label: String,
     value: String,
     icon: ImageVector = Icons.Outlined.Person,
-    onChange: (String) -> Unit
+    keyboardConfig: KeyboardConfig = KeyboardConfig(),
+    onChange: (String) -> Unit,
 ) {
     Column {
         Text(label, color = Color.Gray, fontSize = 12.sp)
         Spacer(Modifier.height(2.dp))
-
         OutlinedTextField(
             value = value,
             onValueChange = onChange,
             singleLine = true,
             leadingIcon = { Icon(icon, contentDescription = null) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
+            modifier = if (keyboardConfig.focusRequester != null)
+                Modifier.fillMaxWidth().focusRequester(keyboardConfig.focusRequester)
+            else
+                Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = keyboardConfig.keyboardType,
+                imeAction = keyboardConfig.imeAction,
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { keyboardConfig.onImeAction?.invoke() },
+                onDone = { keyboardConfig.onImeAction?.invoke() },
+            ),
         )
     }
 }
-
 
 @Composable
 fun PasswordInput(
     label: String,
     value: String,
     visible: Boolean,
+    keyboardConfig: KeyboardConfig = KeyboardConfig(imeAction = ImeAction.Done, keyboardType = KeyboardType.Password),
     onValueChange: (String) -> Unit,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
 ) {
     Column {
         Text(label, color = Color.Gray, fontSize = 12.sp)
         Spacer(Modifier.height(2.dp))
-
         OutlinedTextField(
             value = value,
             onValueChange = { newValue ->
                 // Block paste: only allow single-char additions or deletions
                 val diff = newValue.length - value.length
-                if (diff <= 1) {
-                    onValueChange(newValue)
-                }
+                if (diff <= 1) onValueChange(newValue)
             },
             singleLine = true,
             visualTransformation =
                 if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-            leadingIcon = {
-                Text("🔒")
-            },
+            leadingIcon = { Text("🔒") },
             trailingIcon = {
                 Text(
                     if (visible) "🙈" else "👁",
-                    modifier = Modifier.clickable { onToggle() }
+                    modifier = Modifier.clickable { onToggle() },
                 )
             },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
+            modifier = if (keyboardConfig.focusRequester != null)
+                Modifier.fillMaxWidth().focusRequester(keyboardConfig.focusRequester)
+            else
+                Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                imeAction = keyboardConfig.imeAction,
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { keyboardConfig.onImeAction?.invoke() },
+                onDone = { keyboardConfig.onImeAction?.invoke() },
+            ),
         )
     }
 }

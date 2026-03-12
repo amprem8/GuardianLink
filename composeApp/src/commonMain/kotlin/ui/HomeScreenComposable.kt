@@ -76,6 +76,8 @@ data class HomeUiState(
     val voicePhrase: String,
     val gestureType: String,
     val isOnline: Boolean,
+    val continuousMonitoring: Boolean = true,
+    val voiceChoice: Boolean = true,
     val permissions: PermissionsUiState? = null,
 )
 
@@ -83,7 +85,10 @@ data class HomeActions(
     val onTriggerSOS: () -> Unit,
     val onEditContacts: () -> Unit,
     val onEditConfig: () -> Unit,
-    val onLogout: () -> Unit
+    val onLogout: () -> Unit,
+    val onProfileClick: () -> Unit = {},
+    val onSetContinuousMonitoring: (Boolean) -> Unit = {},
+    val onSetVoiceChoice: (Boolean) -> Unit = {},
 )
 
 @Composable
@@ -98,7 +103,13 @@ fun HomeScreen(
         bottomBar = {
             BottomNavBar(
                 selectedTab = selectedTab,
-                onTabSelected = { },
+                onTabSelected = { idx ->
+                    selectedTab = idx
+                    when (idx) {
+                        1 -> actions.onProfileClick()
+                        2 -> actions.onEditConfig()
+                    }
+                },
                 onSettingsClick = actions.onEditConfig
             )
         }
@@ -116,8 +127,13 @@ fun HomeScreen(
                 userName = state.userName,
                 phoneNumber = state.phoneNumber,
                 isOnline = state.isOnline,
+                continuousMonitoring = state.continuousMonitoring,
+                voiceChoice = state.voiceChoice,
                 onEditConfig = actions.onEditConfig,
-                onLogout = actions.onLogout
+                onLogout = actions.onLogout,
+                onProfileClick = actions.onProfileClick,
+                onSetContinuousMonitoring = actions.onSetContinuousMonitoring,
+                onSetVoiceChoice = actions.onSetVoiceChoice,
             )
             SOSButton(actions.onTriggerSOS)
             ContactsSection(state.contacts, actions.onEditContacts)
@@ -138,8 +154,13 @@ private fun HomeHeader(
     userName: String,
     phoneNumber: String,
     isOnline: Boolean,
+    continuousMonitoring: Boolean,
+    voiceChoice: Boolean,
     onEditConfig: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onProfileClick: () -> Unit,
+    onSetContinuousMonitoring: (Boolean) -> Unit,
+    onSetVoiceChoice: (Boolean) -> Unit,
 ) {
     var showProfileMenu by remember { mutableStateOf(false) }
 
@@ -151,32 +172,20 @@ private fun HomeHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Text(
-                "ResQ",
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp,
-                color = Color(0xFF111827)
-            )
+            Text("ResQ", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = Color(0xFF111827))
             Text("Always ready to help", color = Color(0xFF6B7280), fontSize = 14.sp)
         }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Real-time network status indicator
             NetworkStatusChip(isOnline = isOnline)
 
-            // Profile button + menu
             Box {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .shadow(
-                            elevation = if (showProfileMenu) 8.dp else 0.dp,
-                            shape = CircleShape
-                        )
+                        .shadow(elevation = if (showProfileMenu) 8.dp else 0.dp, shape = CircleShape)
                         .background(
-                            Brush.linearGradient(
-                                listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
-                            ),
+                            Brush.linearGradient(listOf(Color(0xFF2563EB), Color(0xFF7C3AED))),
                             CircleShape
                         )
                         .clip(CircleShape)
@@ -194,137 +203,154 @@ private fun HomeHeader(
                 DropdownMenu(
                     expanded = showProfileMenu,
                     onDismissRequest = { showProfileMenu = false },
-                    modifier = Modifier
-                        .width(280.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White),
+                    modifier = Modifier.width(300.dp).clip(RoundedCornerShape(16.dp)).background(Color.White),
                     shape = RoundedCornerShape(16.dp),
                     shadowElevation = 12.dp,
                     tonalElevation = 0.dp
                 ) {
-                    // Gradient header with user info
+                    // Gradient header
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
-                                )
-                            )
+                            .background(Brush.linearGradient(listOf(Color(0xFF2563EB), Color(0xFF7C3AED))))
                             .padding(horizontal = 20.dp, vertical = 18.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            // Avatar circle in header
                             Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                                modifier = Modifier.size(42.dp).background(Color.White.copy(alpha = 0.2f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = userName.firstOrNull()?.uppercase() ?: "U",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp
+                                    color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp
                                 )
                             }
                             Column {
-                                Text(
-                                    text = userName.ifEmpty { "User" },
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 16.sp
-                                )
+                                Text(text = userName.ifEmpty { "User" }, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                                 if (phoneNumber.isNotEmpty()) {
-                                    Text(
-                                        text = phoneNumber,
-                                        color = Color.White.copy(alpha = 0.75f),
-                                        fontSize = 13.sp
-                                    )
+                                    Text(text = phoneNumber, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
                                 }
                             }
                         }
                     }
 
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(4.dp))
+
+                    // ── Continuous Monitoring toggle ──
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(36.dp).background(Color(0xFFDBEAFE), RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) { Text("🔄", fontSize = 16.sp) }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Continuous Monitoring", color = Color(0xFF374151), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                    Text("Background trigger detection", color = Color(0xFF9CA3AF), fontSize = 11.sp)
+                                }
+                                androidx.compose.material3.Switch(
+                                    checked = continuousMonitoring,
+                                    onCheckedChange = { onSetContinuousMonitoring(it) },
+                                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = Color(0xFF2563EB),
+                                        uncheckedThumbColor = Color.White,
+                                        uncheckedTrackColor = Color(0xFFD1D5DB),
+                                    ),
+                                    modifier = Modifier.size(width = 46.dp, height = 26.dp)
+                                )
+                            }
+                        },
+                        onClick = { onSetContinuousMonitoring(!continuousMonitoring) },
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+
+                    // ── Voice Choice toggle ──
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(36.dp).background(Color(0xFFF3E8FF), RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) { Text("🎙️", fontSize = 16.sp) }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Voice Choice", color = Color(0xFF374151), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                    Text("Voice-triggered SOS alerts", color = Color(0xFF9CA3AF), fontSize = 11.sp)
+                                }
+                                androidx.compose.material3.Switch(
+                                    checked = voiceChoice,
+                                    onCheckedChange = { onSetVoiceChoice(it) },
+                                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = Color(0xFF7C3AED),
+                                        uncheckedThumbColor = Color.White,
+                                        uncheckedTrackColor = Color(0xFFD1D5DB),
+                                    ),
+                                    modifier = Modifier.size(width = 46.dp, height = 26.dp)
+                                )
+                            }
+                        },
+                        onClick = { onSetVoiceChoice(!voiceChoice) },
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFE5E7EB))
+
+                    // My Profile
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Box(
+                                    modifier = Modifier.size(36.dp).background(Color(0xFFEDE9FE), RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) { Icon(Icons.Default.Person, contentDescription = "Profile", tint = Color(0xFF7C3AED), modifier = Modifier.size(20.dp)) }
+                                Text("My Profile", color = Color(0xFF374151), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            }
+                        },
+                        onClick = { showProfileMenu = false; onProfileClick() },
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
 
                     // Settings
                     DropdownMenuItem(
                         text = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                 Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .background(Color(0xFFF3F4F6), RoundedCornerShape(10.dp)),
+                                    modifier = Modifier.size(36.dp).background(Color(0xFFF3F4F6), RoundedCornerShape(10.dp)),
                                     contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.Settings,
-                                        contentDescription = "Settings",
-                                        tint = Color(0xFF6B7280),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                Text(
-                                    "Settings",
-                                    color = Color(0xFF374151),
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
+                                ) { Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color(0xFF6B7280), modifier = Modifier.size(20.dp)) }
+                                Text("Settings", color = Color(0xFF374151), fontSize = 15.sp, fontWeight = FontWeight.Medium)
                             }
                         },
-                        onClick = {
-                            showProfileMenu = false
-                            onEditConfig()
-                        },
+                        onClick = { showProfileMenu = false; onEditConfig() },
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
 
-                    // Divider
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-                        thickness = 0.5.dp,
-                        color = Color(0xFFE5E7EB)
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFE5E7EB))
 
                     // Sign Out
                     DropdownMenuItem(
                         text = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                 Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .background(Color(0xFFFEE2E2), RoundedCornerShape(10.dp)),
+                                    modifier = Modifier.size(36.dp).background(Color(0xFFFEE2E2), RoundedCornerShape(10.dp)),
                                     contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ExitToApp,
-                                        contentDescription = "Sign Out",
-                                        tint = Color(0xFFDC2626),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                Text(
-                                    "Sign Out",
-                                    color = Color(0xFFDC2626),
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
+                                ) { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign Out", tint = Color(0xFFDC2626), modifier = Modifier.size(20.dp)) }
+                                Text("Sign Out", color = Color(0xFFDC2626), fontSize = 15.sp, fontWeight = FontWeight.Medium)
                             }
                         },
-                        onClick = {
-                            showProfileMenu = false
-                            onLogout()
-                        },
+                        onClick = { showProfileMenu = false; onLogout() },
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
 
@@ -533,7 +559,7 @@ private fun ConfigSection(
                             .background(Color(0xFF7C3AED), CircleShape)
                     )
                     Text(
-                        "Gesture: ${if (gestureType == "double-tap") "Back Tap (Double)" else "Device Shake"}",
+                        "Gesture: ${gestureLabel(gestureType)}",
                         color = Color(0xFF6B7280),
                         fontSize = 14.sp
                     )
@@ -828,6 +854,14 @@ private fun NetworkStatusChip(isOnline: Boolean) {
             fontWeight = FontWeight.Medium
         )
     }
+}
+
+private fun gestureLabel(type: String): String = when (type) {
+    "double-tap"         -> "Back Tap (Double)"
+    "triple-tap"         -> "Back Tap (Triple)"
+    "shake"              -> "Device Shake"
+    "volume-triple-down" -> "Volume Down ×3"
+    else                 -> type
 }
 
 @Composable

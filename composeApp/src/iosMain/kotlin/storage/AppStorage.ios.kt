@@ -9,17 +9,10 @@ actual object AppStorage {
     private val defaults: NSUserDefaults
         get() = NSUserDefaults.standardUserDefaults
 
-    // ── public API ──────────────────────────────────────────
-
-    actual fun isRegistered(): Boolean =
-        defaults.boolForKey(KEY_REGISTERED)
-
-    actual fun isLoggedIn(): Boolean =
-        defaults.boolForKey(KEY_LOGGED_IN)
-
+    actual fun isRegistered(): Boolean = defaults.boolForKey(KEY_REGISTERED)
+    actual fun isLoggedIn(): Boolean = defaults.boolForKey(KEY_LOGGED_IN)
     actual fun setLoggedIn(loggedIn: Boolean) {
-        defaults.setBool(loggedIn, forKey = KEY_LOGGED_IN)
-        defaults.synchronize()
+        defaults.setBool(loggedIn, forKey = KEY_LOGGED_IN); defaults.synchronize()
     }
 
     actual fun markRegistered(userName: String, userEmail: String, phoneNumber: String) {
@@ -31,41 +24,58 @@ actual object AppStorage {
         defaults.synchronize()
     }
 
-    actual fun getUserName(): String =
-        defaults.stringForKey(KEY_USER_NAME) ?: ""
+    actual fun getUserName(): String = defaults.stringForKey(KEY_USER_NAME) ?: ""
+    actual fun getUserEmail(): String = defaults.stringForKey(KEY_USER_EMAIL) ?: ""
+    actual fun getPhoneNumber(): String = defaults.stringForKey(KEY_PHONE) ?: ""
 
-    actual fun getUserEmail(): String =
-        defaults.stringForKey(KEY_USER_EMAIL) ?: ""
-
-    actual fun getPhoneNumber(): String =
-        defaults.stringForKey(KEY_PHONE) ?: ""
-
-    actual fun isContactsConfigured(): Boolean =
-        defaults.boolForKey(KEY_CONTACTS_CONFIGURED)
-
+    actual fun isContactsConfigured(): Boolean = defaults.boolForKey(KEY_CONTACTS_CONFIGURED)
     actual fun markContactsConfigured() {
-        defaults.setBool(true, forKey = KEY_CONTACTS_CONFIGURED)
-        defaults.synchronize()
+        defaults.setBool(true, forKey = KEY_CONTACTS_CONFIGURED); defaults.synchronize()
     }
 
+    // ── Safe PIN ────────────────────────────────────────────
+    actual fun getSafePin(): String = defaults.stringForKey(KEY_SAFE_PIN) ?: ""
+    actual fun setSafePin(pin: String) {
+        defaults.setObject(pin, forKey = KEY_SAFE_PIN); defaults.synchronize()
+    }
+
+    // ── Monitoring toggles ──────────────────────────────────
+    actual fun isContinuousMonitoring(): Boolean =
+        if (defaults.objectForKey(KEY_CONTINUOUS_MONITORING) == null) true
+        else defaults.boolForKey(KEY_CONTINUOUS_MONITORING)
+
+    actual fun setContinuousMonitoring(enabled: Boolean) {
+        defaults.setBool(enabled, forKey = KEY_CONTINUOUS_MONITORING); defaults.synchronize()
+    }
+
+    actual fun isVoiceChoice(): Boolean =
+        if (defaults.objectForKey(KEY_VOICE_CHOICE) == null) false
+        else defaults.boolForKey(KEY_VOICE_CHOICE)
+
+    actual fun setVoiceChoice(enabled: Boolean) {
+        defaults.setBool(enabled, forKey = KEY_VOICE_CHOICE); defaults.synchronize()
+    }
+
+    // ── Session ─────────────────────────────────────────────
     actual fun logout() {
-        defaults.setBool(false, forKey = KEY_LOGGED_IN)
-        defaults.synchronize()
+        defaults.setBool(false, forKey = KEY_LOGGED_IN); defaults.synchronize()
     }
 
     actual fun clear() {
-        listOf(KEY_REGISTERED, KEY_LOGGED_IN, KEY_USER_NAME, KEY_USER_EMAIL, KEY_PHONE, KEY_CONTACTS_CONFIGURED).forEach {
-            defaults.removeObjectForKey(it)
-        }
+        listOf(KEY_REGISTERED, KEY_LOGGED_IN, KEY_USER_NAME, KEY_USER_EMAIL, KEY_PHONE,
+               KEY_CONTACTS_CONFIGURED, KEY_SAFE_PIN, KEY_CONTINUOUS_MONITORING, KEY_VOICE_CHOICE
+        ).forEach { defaults.removeObjectForKey(it) }
         defaults.synchronize()
     }
 
     // ── keys ────────────────────────────────────────────────
-
-    private const val KEY_REGISTERED = "registered"
-    private const val KEY_LOGGED_IN = "loggedIn"
-    private const val KEY_USER_NAME = "userName"
-    private const val KEY_USER_EMAIL = "userEmail"
-    private const val KEY_PHONE = "phoneNumber"
-    private const val KEY_CONTACTS_CONFIGURED = "contactsConfigured"
+    private const val KEY_REGISTERED            = "registered"
+    private const val KEY_LOGGED_IN             = "loggedIn"
+    private const val KEY_USER_NAME             = "userName"
+    private const val KEY_USER_EMAIL            = "userEmail"
+    private const val KEY_PHONE                 = "phoneNumber"
+    private const val KEY_CONTACTS_CONFIGURED   = "contactsConfigured"
+    private const val KEY_SAFE_PIN              = "safePin"
+    private const val KEY_CONTINUOUS_MONITORING = "continuousMonitoring"
+    private const val KEY_VOICE_CHOICE          = "voiceChoice"
 }

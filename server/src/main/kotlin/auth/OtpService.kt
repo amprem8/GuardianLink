@@ -32,12 +32,32 @@ object OtpService {
         .build()
 
     /**
-     * Generate a random 6-digit OTP, store it in DynamoDB, and send via SNS.
+     * Generate a random 6-digit OTP, store it in DynamoDB (only if no valid OTP
+     * already exists for this phone), and send via SNS.
+     *
+     * If a non-expired OTP is already stored we REUSE it instead of
+     * generating a new one. This means a DB refresh / redeploy never
+     * invalidates an OTP that was already sent to the user.
      */
     fun sendOtp(phone: String) {
-        val otp = generateOtp()
-        storeOtp(phone, otp)
-        sendSms(phone, otp)
+        val nowSeconds = System.currentTimeMillis() / 1000
+
+        // Check if a valid (non-expired) OTP already exists
+        val existing = getStoredOtp(phone)
+        val existingTtl = existing?.get("ttl")?.n()?.toLongOrNull() ?: 0L
+        val existingOtp = existing?.get("otp")?.s()
+
+        val otpToSend = if (existingOtp != null && nowSeconds < existingTtl) {
+            // Re-use the existing OTP — do NOT overwrite it
+            logger.info("Re-using existing valid OTP for {}", phone)
+            existingOtp
+        } else {
+            // No valid OTP exists — generate and store a new one
+            val otp = generateOtp()
+            storeOtp(phone, otp)
+            otp
+        }
+        sendSms(phone, otpToSend)
     }
 
     /**

@@ -96,6 +96,7 @@ fun EmergencyContactsScreen(
     deviceContacts: List<DeviceContact>,
     isLoadingContacts: Boolean,
     permissionState: ContactsPermissionState,
+    verifiedPhone: String = "",
     onAddContact: (name: String, phone: String) -> Unit,
     onAddDeviceContact: (DeviceContact) -> Unit,
     onRemoveContact: (String) -> Unit,
@@ -108,6 +109,7 @@ fun EmergencyContactsScreen(
     onBack: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
+    val hasEnoughContacts = contacts.size >= MIN_CONTACTS
 
     Box(
         modifier = Modifier
@@ -121,7 +123,8 @@ fun EmergencyContactsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 88.dp) // room for bottom button
+                // Only leave room for the bottom button when it's visible
+                .padding(bottom = if (hasEnoughContacts) 88.dp else 0.dp)
         ) {
             // ── Top bar ──
             Row(
@@ -243,52 +246,50 @@ fun EmergencyContactsScreen(
             }
         }
 
-        // ── Continue button (fixed bottom) ──
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(Color.White)
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-        ) {
-            val enabled = contacts.size >= MIN_CONTACTS
-            Button(
-                onClick = onContinue,
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                contentPadding = PaddingValues(0.dp),
+        // ── Continue button (fixed bottom) — only visible when MIN_CONTACTS reached ──
+        if (hasEnoughContacts) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            if (enabled) Brush.horizontalGradient(
-                                listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
-                            ) else Brush.horizontalGradient(
-                                listOf(Color(0xFFD1D5DB), Color(0xFFD1D5DB))
-                            ),
-                            RoundedCornerShape(14.dp),
-                        ),
-                    contentAlignment = Alignment.Center,
+                Button(
+                    onClick = onContinue,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                    contentPadding = PaddingValues(0.dp),
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
+                                ),
+                                RoundedCornerShape(14.dp),
+                            ),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            Icons.Filled.Check,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Text(
-                            "Continue",
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Text(
+                                "Continue",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 16.sp,
+                            )
+                        }
                     }
                 }
             }
@@ -349,6 +350,7 @@ fun EmergencyContactsScreen(
                 deviceContacts = deviceContacts,
                 isLoadingContacts = isLoadingContacts,
                 permissionState = permissionState,
+                verifiedPhone = verifiedPhone,
                 onAdd = onAddContact,
                 onAddDevice = onAddDeviceContact,
                 onDismiss = { onShowAddDialog(false) },
@@ -512,6 +514,7 @@ private fun AddContactDialog(
     deviceContacts: List<DeviceContact>,
     isLoadingContacts: Boolean,
     permissionState: ContactsPermissionState,
+    verifiedPhone: String = "",
     onAdd: (name: String, phone: String) -> Unit,
     onAddDevice: (DeviceContact) -> Unit,
     onDismiss: () -> Unit,
@@ -522,6 +525,9 @@ private fun AddContactDialog(
     var phone by remember { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
     var localError by remember { mutableStateOf("") }
+
+    // Normalize verified phone to last 10 digits for comparison
+    val verifiedDigits = verifiedPhone.replace("\\D".toRegex(), "").takeLast(10)
 
     // Full-screen overlay with fade
     Box(
@@ -575,11 +581,9 @@ private fun AddContactDialog(
                 targetState = isManualMode,
                 transitionSpec = {
                     if (targetState) {
-                        // Sliding in from left for Manual
                         (slideInHorizontally { -it } + fadeIn(tween(250))) togetherWith
                                 (slideOutHorizontally { it } + fadeOut(tween(200)))
                     } else {
-                        // Sliding in from right for Contacts
                         (slideInHorizontally { it } + fadeIn(tween(250))) togetherWith
                                 (slideOutHorizontally { -it } + fadeOut(tween(200)))
                     }
@@ -591,16 +595,13 @@ private fun AddContactDialog(
                         name = name,
                         phone = phone,
                         error = localError,
-                        onNameChange = { name = it },
-                        onPhoneChange = { phone = it.filter { c -> c.isDigit() || c == '+' }.take(13) },
+                        onNameChange = { if (it.length <= 10) name = it },
+                        onPhoneChange = { phone = it.filter { c -> c.isDigit() }.take(10) },
                     )
                 } else {
                     if (!permissionState.isGranted) {
                         PermissionRequest(onGrant = { permissionState.launchRequest() })
                     } else {
-                        // Auto-load contacts when permission is granted
-                        // Fixes the first-try bug: if permission was just granted
-                        // after showing the PermissionRequest, contacts were never loaded
                         LaunchedEffect(permissionState.isGranted) {
                             onLoadDeviceContacts()
                         }
@@ -608,17 +609,30 @@ private fun AddContactDialog(
                             contacts = deviceContacts,
                             isLoading = isLoadingContacts,
                             search = search,
+                            verifiedDigits = verifiedDigits,
                             onSearchChange = { search = it },
                             onPick = { dc ->
-                                onAddDevice(dc)
-                                onDismiss()
+                                val dcDigits = dc.phone.replace("\\D".toRegex(), "").takeLast(10)
+                                if (dcDigits == verifiedDigits && verifiedDigits.isNotEmpty()) {
+                                    localError = "Your verified number cannot be added as an emergency contact"
+                                } else {
+                                    onAddDevice(dc)
+                                    onDismiss()
+                                }
                             },
+                            onError = { msg -> localError = msg },
                         )
                     }
                 }
             }
 
             Spacer(Modifier.height(16.dp))
+
+            // ── Error for import mode ──
+            if (!isManualMode && localError.isNotBlank()) {
+                Text(localError, color = Color(0xFFDC2626), fontSize = 13.sp)
+                Spacer(Modifier.height(8.dp))
+            }
 
             // ── Buttons (only for manual mode) ──
             if (isManualMode) {
@@ -640,16 +654,20 @@ private fun AddContactDialog(
                     // Add
                     Button(
                         onClick = {
-                            if (name.isBlank()) {
-                                localError = "Please enter contact name"
-                            } else if (phone.isBlank()) {
-                                localError = "Please enter phone number"
-                            } else {
-                                localError = ""
-                                onAdd(name.trim(), phone.trim())
+                            when {
+                                name.isBlank() -> localError = "Please enter contact name"
+                                name.length > 10 -> localError = "Name must be 10 characters or less"
+                                phone.isBlank() -> localError = "Please enter phone number"
+                                phone.length != 10 -> localError = "Phone number must be exactly 10 digits"
+                                phone == verifiedDigits && verifiedDigits.isNotEmpty() ->
+                                    localError = "Your verified number cannot be added as an emergency contact"
+                                else -> {
+                                    localError = ""
+                                    onAdd(name.trim(), phone.trim())
+                                }
                             }
                         },
-                        enabled = name.isNotBlank() && phone.isNotBlank(),
+                        enabled = name.isNotBlank() && phone.length == 10,
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -811,13 +829,24 @@ private fun ManualEntryFields(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Name
         Column {
-            Text("Name", color = Color(0xFF374151), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Name", color = Color(0xFF374151), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    "${name.length}/10",
+                    fontSize = 12.sp,
+                    color = if (name.length >= 10) Color(0xFFDC2626) else Color(0xFF9CA3AF),
+                )
+            }
             Spacer(Modifier.height(4.dp))
             OutlinedTextField(
                 value = name,
-                onValueChange = onNameChange,
+                onValueChange = { if (it.length <= 10) onNameChange(it) },
                 singleLine = true,
-                placeholder = { Text("Contact name", color = Color(0xFF9CA3AF)) },
+                placeholder = { Text("Contact name (max 10 chars)", color = Color(0xFF9CA3AF)) },
                 leadingIcon = { Icon(Icons.Filled.Person, null, tint = Color(0xFF9CA3AF)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -826,11 +855,22 @@ private fun ManualEntryFields(
 
         // Phone
         Column {
-            Text("Phone Number", color = Color(0xFF374151), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Phone Number", color = Color(0xFF374151), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    "${phone.length}/10",
+                    fontSize = 12.sp,
+                    color = if (phone.length == 10) Color(0xFF16A34A) else Color(0xFF9CA3AF),
+                )
+            }
             Spacer(Modifier.height(4.dp))
             OutlinedTextField(
                 value = phone,
-                onValueChange = onPhoneChange,
+                onValueChange = { onPhoneChange(it) },
                 singleLine = true,
                 placeholder = { Text("9876543210", color = Color(0xFF9CA3AF)) },
                 leadingIcon = {
@@ -844,7 +884,7 @@ private fun ManualEntryFields(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
             )
-            Text("Enter 10-digit Indian mobile number", color = Color(0xFF9CA3AF), fontSize = 12.sp)
+            Text("Enter exactly 10-digit Indian mobile number", color = Color(0xFF9CA3AF), fontSize = 12.sp)
         }
 
         // Error
@@ -905,8 +945,10 @@ private fun ContactPickerList(
     contacts: List<DeviceContact>,
     isLoading: Boolean,
     search: String,
+    verifiedDigits: String = "",
     onSearchChange: (String) -> Unit,
     onPick: (DeviceContact) -> Unit,
+    onError: (String) -> Unit = {},
 ) {
     val filtered = if (search.isBlank()) contacts
     else contacts.filter {
@@ -948,7 +990,19 @@ private fun ContactPickerList(
         } else {
             LazyColumn(modifier = Modifier.height(260.dp)) {
                 items(filtered, key = { "${it.name}|${it.phone}" }) { dc ->
-                    DeviceContactRow(dc, onPick)
+                    val dcDigits = dc.phone.replace("\\D".toRegex(), "").takeLast(10)
+                    val isVerifiedNumber = verifiedDigits.isNotEmpty() && dcDigits == verifiedDigits
+                    DeviceContactRow(
+                        contact = dc,
+                        isBlocked = isVerifiedNumber,
+                        onPick = {
+                            if (isVerifiedNumber) {
+                                onError("Your verified number cannot be added as an emergency contact")
+                            } else {
+                                onPick(dc)
+                            }
+                        }
+                    )
                 }
                 if (filtered.isEmpty()) {
                     item {
@@ -966,7 +1020,7 @@ private fun ContactPickerList(
 }
 
 @Composable
-private fun DeviceContactRow(contact: DeviceContact, onPick: (DeviceContact) -> Unit) {
+private fun DeviceContactRow(contact: DeviceContact, isBlocked: Boolean = false, onPick: (DeviceContact) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -977,19 +1031,39 @@ private fun DeviceContactRow(contact: DeviceContact, onPick: (DeviceContact) -> 
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(
-            modifier = Modifier.size(36.dp).background(Color(0xFFEDE9FE), CircleShape),
+            modifier = Modifier.size(36.dp).background(
+                if (isBlocked) Color(0xFFFEE2E2) else Color(0xFFEDE9FE),
+                CircleShape
+            ),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 contact.name.firstOrNull()?.uppercase() ?: "?",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
-                color = Color(0xFF7C3AED),
+                color = if (isBlocked) Color(0xFFDC2626) else Color(0xFF7C3AED),
             )
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(contact.name, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF111827))
-            Text(contact.phone, fontSize = 12.sp, color = Color(0xFF6B7280))
+            Text(
+                contact.name,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (isBlocked) Color(0xFF9CA3AF) else Color(0xFF111827),
+            )
+            Text(
+                contact.phone,
+                fontSize = 12.sp,
+                color = if (isBlocked) Color(0xFFDC2626) else Color(0xFF6B7280),
+            )
+        }
+        if (isBlocked) {
+            Text(
+                "Your number",
+                fontSize = 11.sp,
+                color = Color(0xFFDC2626),
+                fontWeight = FontWeight.Medium,
+            )
         }
     }
 }

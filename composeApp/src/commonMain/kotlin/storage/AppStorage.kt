@@ -2,14 +2,6 @@
 
 package storage
 
-/**
- * Platform-specific persistent key-value storage.
- *
- * - Android: SharedPreferences
- * - iOS: NSUserDefaults
- *
- * Data survives app restarts and is cleared only on uninstall (or explicit [clear]).
- */
 expect object AppStorage {
 
     /** Returns `true` if the user completed signup + OTP verification. */
@@ -37,6 +29,26 @@ expect object AppStorage {
 
     /** Mark the emergency-contacts setup step as complete. */
     fun markContactsConfigured()
+
+    // ── Safe PIN ────────────────────────────────────────────
+
+    /** Persisted 4-digit PIN used to cancel an active SOS inside the app. */
+    fun getSafePin(): String
+
+    /** Save (or update) the 4-digit safe PIN. */
+    fun setSafePin(pin: String)
+
+    // ── Monitoring toggles ──────────────────────────────────
+
+    /** Whether continuous background monitoring is enabled (default: true). */
+    fun isContinuousMonitoring(): Boolean
+    fun setContinuousMonitoring(enabled: Boolean)
+
+    /** Whether voice-choice (voice-triggered SOS) is enabled (default: true). */
+    fun isVoiceChoice(): Boolean
+    fun setVoiceChoice(enabled: Boolean)
+
+    // ── Session ─────────────────────────────────────────────
 
     /** Clear login session but keep registration data (user can re-login). */
     fun logout()
