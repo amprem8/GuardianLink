@@ -12,6 +12,8 @@ import java.util.UUID
 object SosPushHandler {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private const val DUPLICATE_WINDOW_MS = 12_000L
+    private val recentDispatches = LinkedHashMap<String, Long>()
 
     @Serializable
     data class SosPushRequest(
@@ -78,6 +80,39 @@ object SosPushHandler {
             if (req.victimUserId.isBlank()) return HttpResponses.badRequest("victimUserId is required")
             if (req.victimName.isBlank()) return HttpResponses.badRequest("victimName is required")
             if (req.contacts.isEmpty()) return HttpResponses.badRequest("contacts is required")
+
+            val dedupeKey = buildString {
+                append(req.victimUserId.trim())
+                append('|')
+                append(req.victimName.trim())
+                append('|')
+                append(req.message?.trim().orEmpty())
+                append('|')
+                append(req.contacts.size)
+            }
+            if (isDuplicateDispatch(dedupeKey)) {
+                val skipped = req.contacts.map {
+                    ContactPublishResult(
+                        contactName = it.contactName,
+                        published = true,
+                        messageId = null,
+                        error = null,
+                        locationIncluded = false,
+                        deliveryMethod = "SKIPPED_DUPLICATE",
+                    )
+                }
+                return HttpResponses.ok(
+                    json.encodeToString(
+                        SosPushResponse(
+                            sosId = "dedup-${System.currentTimeMillis()}",
+                            sentCount = skipped.size,
+                            failedCount = 0,
+                            allPublished = true,
+                            results = skipped,
+                        )
+                    )
+                )
+            }
 
             val sosId = UUID.randomUUID().toString()
             val helpText = "${req.victimName} might need help"
@@ -227,6 +262,20 @@ object SosPushHandler {
     }
 
     private fun toE164(tenDigitPhone: String): String = "+91$tenDigitPhone"
+
+    @Synchronized
+    private fun isDuplicateDispatch(key: String): Boolean {
+        val now = System.currentTimeMillis()
+        val iterator = recentDispatches.entries.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            if (now - entry.value > DUPLICATE_WINDOW_MS) iterator.remove()
+        }
+        val seenAt = recentDispatches[key]
+        if (seenAt != null && now - seenAt <= DUPLICATE_WINDOW_MS) return true
+        recentDispatches[key] = now
+        return false
+    }
 }
 
 

@@ -85,6 +85,8 @@ data class ProfileUiState(
     val safePin: String,
     val continuousMonitoring: Boolean,
     val voiceChoice: Boolean,
+    val lastGestureTriggered: String,
+    val lastSosSent: String,
 )
 
 data class ProfileActions(
@@ -189,10 +191,73 @@ fun ProfileScreen(
                     onSetContinuousMonitoring = actions.onSetContinuousMonitoring,
                     onSetVoiceChoice = actions.onSetVoiceChoice,
                 )
+                EmergencyAuditCard(
+                    lastGestureTriggered = state.lastGestureTriggered,
+                    lastSosSent = state.lastSosSent,
+                )
                 SafePinCard(currentPin = state.safePin, onSavePin = actions.onSavePin)
                 Spacer(Modifier.height(8.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun EmergencyAuditCard(
+    lastGestureTriggered: String,
+    lastSosSent: String,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text(
+                text = "Emergency Activity",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = Color(0xFF111827),
+            )
+
+            AuditRow(
+                title = "Last gesture triggered",
+                value = lastGestureTriggered.ifBlank { "No gesture trigger recorded yet" },
+            )
+
+            HorizontalDivider(thickness = 0.5.dp, color = Color(0xFFF1F5F9))
+
+            AuditRow(
+                title = "Last SOS sent",
+                value = lastSosSent.ifBlank { "No SOS has been sent yet" },
+            )
+        }
+    }
+}
+
+@Composable
+private fun AuditRow(
+    title: String,
+    value: String,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = title,
+            fontSize = 12.sp,
+            color = Color(0xFF6B7280),
+            fontWeight = FontWeight.Medium,
+        )
+        Text(
+            text = value,
+            fontSize = 14.sp,
+            color = Color(0xFF111827),
+            fontWeight = FontWeight.SemiBold,
+            lineHeight = 20.sp,
+        )
     }
 }
 

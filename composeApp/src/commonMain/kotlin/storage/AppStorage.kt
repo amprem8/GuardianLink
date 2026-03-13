@@ -56,6 +56,13 @@ expect object AppStorage {
     fun getLastKnownOnline(): Boolean
     fun setLastKnownOnline(isOnline: Boolean)
 
+    /** Profile audit fields for latest emergency interactions. */
+    fun getLastGestureTriggeredText(): String
+    fun setLastGestureTriggeredText(value: String)
+
+    fun getLastSosSentText(): String
+    fun setLastSosSentText(value: String)
+
     // ── Session ─────────────────────────────────────────────
 
     /** Clear login session but keep registration data (user can re-login). */

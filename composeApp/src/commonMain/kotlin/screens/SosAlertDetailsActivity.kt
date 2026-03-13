@@ -19,7 +19,7 @@ class SosAlertDetailsActivity : Screen {
             alert = alert,
             onClose = {
                 SosAlertSession.clear()
-                navigator?.pop()
+                navigator?.replace(HomeScreenActivity())
             },
         )
     }

@@ -15,6 +15,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.messaging.FirebaseMessaging
 import gesture.GestureDetectionEngine
+import location.MainActivityHolder
 import network.NetworkConnectivityObserver
 import screens.initTriggerConfigPlatform
 import session.SosAlertSession
@@ -31,6 +32,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         AppStorage.init(this)
+        MainActivityHolder.context = applicationContext
         ContactStorage.init(this)
         DeviceContactsHelper.init(this)
         TriggerConfigStorage.init(this)

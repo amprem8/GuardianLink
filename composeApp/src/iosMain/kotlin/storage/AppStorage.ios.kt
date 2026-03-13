@@ -72,6 +72,20 @@ actual object AppStorage {
         defaults.setBool(isOnline, forKey = KEY_LAST_KNOWN_ONLINE); defaults.synchronize()
     }
 
+    actual fun getLastGestureTriggeredText(): String =
+        defaults.stringForKey(KEY_LAST_GESTURE_TRIGGERED_TEXT) ?: ""
+
+    actual fun setLastGestureTriggeredText(value: String) {
+        defaults.setObject(value, forKey = KEY_LAST_GESTURE_TRIGGERED_TEXT); defaults.synchronize()
+    }
+
+    actual fun getLastSosSentText(): String =
+        defaults.stringForKey(KEY_LAST_SOS_SENT_TEXT) ?: ""
+
+    actual fun setLastSosSentText(value: String) {
+        defaults.setObject(value, forKey = KEY_LAST_SOS_SENT_TEXT); defaults.synchronize()
+    }
+
     // ── Session ─────────────────────────────────────────────
     actual fun logout() {
         defaults.setBool(false, forKey = KEY_LOGGED_IN); defaults.synchronize()
@@ -80,7 +94,8 @@ actual object AppStorage {
     actual fun clear() {
         listOf(KEY_REGISTERED, KEY_LOGGED_IN, KEY_USER_NAME, KEY_USER_EMAIL, KEY_PHONE,
                KEY_CONTACTS_CONFIGURED, KEY_SAFE_PIN, KEY_CONTINUOUS_MONITORING, KEY_VOICE_CHOICE,
-               KEY_OFFLINE_FALLBACK_MODE, KEY_LAST_KNOWN_ONLINE
+               KEY_OFFLINE_FALLBACK_MODE, KEY_LAST_KNOWN_ONLINE,
+               KEY_LAST_GESTURE_TRIGGERED_TEXT, KEY_LAST_SOS_SENT_TEXT
         ).forEach { defaults.removeObjectForKey(it) }
         defaults.synchronize()
     }
@@ -100,4 +115,6 @@ actual object AppStorage {
     private const val KEY_VOICE_CHOICE          = "voiceChoice"
     private const val KEY_OFFLINE_FALLBACK_MODE = "offlineFallbackMode"
     private const val KEY_LAST_KNOWN_ONLINE     = "lastKnownOnline"
+    private const val KEY_LAST_GESTURE_TRIGGERED_TEXT = "lastGestureTriggeredText"
+    private const val KEY_LAST_SOS_SENT_TEXT = "lastSosSentText"
 }

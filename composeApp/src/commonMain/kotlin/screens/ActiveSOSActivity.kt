@@ -6,9 +6,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
+import location.getCurrentLocationOrNull
 import network.NetworkConnectivityObserver
 import network.SosPushApi
 import permissions.rememberLocationPermission
@@ -17,6 +19,7 @@ import storage.AppStorage
 import storage.ContactStorage
 import ui.ActiveSOSScreen
 import ui.OFFLINE_MODE_NORMAL_SMS
+import util.nowTimestampText
 
 class ActiveSOSActivity(
     private val offlineFallbackMode: String = OFFLINE_MODE_NORMAL_SMS,
@@ -31,7 +34,7 @@ class ActiveSOSActivity(
         val safePin = AppStorage.getSafePin()
         val locationPermission = rememberLocationPermission()
 
-        var sosTriggered by remember { mutableStateOf(false) }
+        var sosTriggered by rememberSaveable { mutableStateOf(false) }
         var stopUiTimer by remember { mutableStateOf(false) }
         var pushResponse by remember { mutableStateOf<SosPushApi.SosPushResponse?>(null) }
         var pushError by remember { mutableStateOf<String?>(null) }
@@ -39,24 +42,20 @@ class ActiveSOSActivity(
         LaunchedEffect(isOnline, locationPermission.isGranted, savedContacts) {
             if (sosTriggered || !isOnline || savedContacts.isEmpty()) return@LaunchedEffect
 
+            // Guard immediately so recomposition/key changes do not double-dispatch SOS.
+            sosTriggered = true
+
             val victimName = AppStorage.getUserName().ifBlank { "User" }
             val victimUserId = AppStorage.getUserEmail()
                 .ifBlank { AppStorage.getPhoneNumber().ifBlank { "user" } }
 
-            val location = if (locationPermission.isGranted) {
-                // Location provider integration can replace this static fallback later.
-                SosPushApi.SosLocationContext(
-                    permissionGranted = true,
-                    gpsEnabled = true,
-                    lat = 12.9716,
-                    lng = 77.5946,
-                )
-            } else {
-                SosPushApi.SosLocationContext(
-                    permissionGranted = false,
-                    gpsEnabled = false,
-                )
-            }
+            val latestLocation = if (locationPermission.isGranted) getCurrentLocationOrNull() else null
+            val location = SosPushApi.SosLocationContext(
+                permissionGranted = locationPermission.isGranted,
+                gpsEnabled = latestLocation != null,
+                lat = latestLocation?.latitude,
+                lng = latestLocation?.longitude,
+            )
 
             runCatching {
                 refreshPushRegistrationBeforeSos()
@@ -77,14 +76,15 @@ class ActiveSOSActivity(
                 )
             }.onSuccess { response ->
                 pushResponse = response
+                if (response.sentCount > 0) {
+                    AppStorage.setLastSosSentText("Sent at ${nowTimestampText()}")
+                }
                 if (response.allPublished) {
                     stopUiTimer = true
                 }
             }.onFailure { error ->
                 pushError = error.message ?: error::class.simpleName ?: "Push failed"
             }
-
-            sosTriggered = true
         }
 
         ActiveSOSScreen(

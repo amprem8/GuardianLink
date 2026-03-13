@@ -13,8 +13,19 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import gesture.GestureDetectionEngine
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import location.MainActivityHolder
+import location.getCurrentLocationOrNull
+import network.SosPushApi
+import push.refreshPushRegistrationBeforeSos
 import storage.AppStorage
+import storage.ContactStorage
 import storage.TriggerConfigStorage
+import util.nowTimestampText
 
 /**
  * Foreground service that keeps the SOS gesture + voice trigger listener alive
@@ -29,6 +40,9 @@ import storage.TriggerConfigStorage
  */
 class SOSForegroundService : Service() {
 
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Volatile private var sosDispatchInFlight = false
+
     companion object {
         const val CHANNEL_ID = "sos_listener_channel"
         const val NOTIFICATION_ID = 1001
@@ -38,8 +52,10 @@ class SOSForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         AppStorage.init(this)
+        ContactStorage.init(this)
         TriggerConfigStorage.init(this)
         GestureDetectionEngine.init(this)
+        MainActivityHolder.context = applicationContext
         createNotificationChannel()
     }
 
@@ -69,7 +85,8 @@ class SOSForegroundService : Service() {
         val started = GestureDetectionEngine.start(selectedGesture) {
             if (isAppInForeground()) return@start false
             Log.i(TAG, "Gesture detected in continuous monitoring mode: $selectedGesture")
-            // TODO: Wire into full SOS pipeline trigger.
+            AppStorage.setLastGestureTriggeredText("$selectedGesture at ${nowTimestampText()}")
+            dispatchSosFromBackground()
             true
         }
 
@@ -84,8 +101,65 @@ class SOSForegroundService : Service() {
 
     override fun onDestroy() {
         GestureDetectionEngine.stop()
+        serviceScope.cancel()
         super.onDestroy()
-        // TODO Phase 2: Stop gesture detection + voice listener here
+    }
+
+    private fun dispatchSosFromBackground() {
+        if (sosDispatchInFlight) {
+            Log.d(TAG, "Skipping SOS dispatch: previous dispatch still in flight")
+            return
+        }
+
+        sosDispatchInFlight = true
+        serviceScope.launch {
+            try {
+                val contacts = ContactStorage.loadContacts()
+                if (contacts.isEmpty()) {
+                    Log.w(TAG, "Skipping SOS dispatch: no emergency contacts configured")
+                    return@launch
+                }
+
+                refreshPushRegistrationBeforeSos()
+
+                val victimName = AppStorage.getUserName().ifBlank { "User" }
+                val victimUserId = AppStorage.getUserEmail()
+                    .ifBlank { AppStorage.getPhoneNumber().ifBlank { "user" } }
+
+                val latestLocation = getCurrentLocationOrNull()
+                val location = SosPushApi.SosLocationContext(
+                    permissionGranted = latestLocation != null,
+                    gpsEnabled = latestLocation != null,
+                    lat = latestLocation?.latitude,
+                    lng = latestLocation?.longitude,
+                )
+
+                val response = SosPushApi.trigger(
+                    SosPushApi.SosPushRequest(
+                        victimUserId = victimUserId,
+                        victimName = victimName,
+                        location = location,
+                        contacts = contacts.map { c ->
+                            SosPushApi.SosContactTarget(
+                                contactName = c.name,
+                                phoneNumber = c.phone,
+                                endpointArn = "",
+                                includeGPS = c.includeGPS,
+                            )
+                        },
+                    )
+                )
+
+                if (response.sentCount > 0) {
+                    AppStorage.setLastSosSentText("Sent at ${nowTimestampText()}")
+                }
+                Log.i(TAG, "Background SOS dispatch complete: sent=${response.sentCount}, failed=${response.failedCount}")
+            } catch (t: Throwable) {
+                Log.w(TAG, "Background SOS dispatch failed", t)
+            } finally {
+                sosDispatchInFlight = false
+            }
+        }
     }
 
     private fun isAppInForeground(): Boolean {

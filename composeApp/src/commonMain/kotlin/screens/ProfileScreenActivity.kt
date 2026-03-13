@@ -22,6 +22,8 @@ class ProfileScreenActivity : Screen {
         val userName    = UserSession.userName.ifEmpty { AppStorage.getUserName() }
         val userEmail   = UserSession.userEmail.ifEmpty { AppStorage.getUserEmail() }
         val phoneNumber = AppStorage.getPhoneNumber()
+        val lastGestureTriggered = AppStorage.getLastGestureTriggeredText()
+        val lastSosSent = AppStorage.getLastSosSentText()
 
         // Use mutable states so toggling reflects immediately without re-entering
         var safePin              by remember { mutableStateOf(AppStorage.getSafePin()) }
@@ -35,6 +37,8 @@ class ProfileScreenActivity : Screen {
             safePin              = safePin,
             continuousMonitoring = continuousMonitoring,
             voiceChoice          = voiceChoice,
+            lastGestureTriggered = lastGestureTriggered,
+            lastSosSent = lastSosSent,
         )
 
         val actions = ProfileActions(

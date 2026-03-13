@@ -14,7 +14,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.getSystemService
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import session.SosAlertSession
 
 class ResqFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -67,17 +66,6 @@ class ResqFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
-        if (victimName.isNotBlank()) {
-            SosAlertSession.set(
-                SosAlertSession.Alert(
-                    sosId = if (sosId.isNotBlank()) sosId else "sos-${System.currentTimeMillis()}",
-                    victimName = victimName,
-                    helpText = helpText,
-                    lat = lat,
-                    lng = lng,
-                )
-            )
-        }
 
         val title = message.notification?.title
             ?: message.data["title"]

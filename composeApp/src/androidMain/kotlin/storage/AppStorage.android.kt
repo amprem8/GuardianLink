@@ -67,6 +67,20 @@ actual object AppStorage {
         prefs.edit().putBoolean(KEY_LAST_KNOWN_ONLINE, isOnline).commit()
     }
 
+    actual fun getLastGestureTriggeredText(): String =
+        prefs.getString(KEY_LAST_GESTURE_TRIGGERED_TEXT, "").orEmpty()
+
+    actual fun setLastGestureTriggeredText(value: String) {
+        prefs.edit().putString(KEY_LAST_GESTURE_TRIGGERED_TEXT, value).commit()
+    }
+
+    actual fun getLastSosSentText(): String =
+        prefs.getString(KEY_LAST_SOS_SENT_TEXT, "").orEmpty()
+
+    actual fun setLastSosSentText(value: String) {
+        prefs.edit().putString(KEY_LAST_SOS_SENT_TEXT, value).commit()
+    }
+
     // ── Session ─────────────────────────────────────────────
     actual fun logout() { prefs.edit().putBoolean(KEY_LOGGED_IN, false).commit() }
     actual fun clear() { prefs.edit().clear().commit() }
@@ -86,4 +100,6 @@ actual object AppStorage {
     private const val KEY_VOICE_CHOICE          = "voiceChoice"
     private const val KEY_OFFLINE_FALLBACK_MODE = "offlineFallbackMode"
     private const val KEY_LAST_KNOWN_ONLINE     = "lastKnownOnline"
+    private const val KEY_LAST_GESTURE_TRIGGERED_TEXT = "lastGestureTriggeredText"
+    private const val KEY_LAST_SOS_SENT_TEXT = "lastSosSentText"
 }
