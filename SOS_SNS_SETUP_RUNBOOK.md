@@ -523,6 +523,16 @@ aws lambda get-function-configuration \
   --output text
 ```
 
+To map multiple emergency contacts at once, use one JSON map:
+
+```bash
+MERGED_ENV_JSON="$(jq -c \
+  --arg e1 "$ENDPOINT_ARN_9345" \
+  --arg e2 "arn:aws:sns:ap-south-1:291759414836:endpoint/GCM/resq-android-fcm/REPLACE_2" \
+  '. + {"SOS_PHONE_ENDPOINT_MAP_JSON":("{\"9345771470\":\""+$e1+"\",\"9876543210\":\""+$e2+"\"}")}' \
+  <<< "$CURRENT_ENV_JSON")"
+```
+
 ### 11D) Trigger SOS by phone number (no endpoint ARN in payload)
 
 ```bash
@@ -557,6 +567,31 @@ Build app after pulling latest code:
 ```bash
 ./gradlew :composeApp:compileDebugKotlin
 ```
+
+## Step 12: Deploy latest backend + app for real-time push detail page
+
+After code updates, redeploy Lambda and reinstall app:
+
+```bash
+cd /Users/pavudi605@apac.comcast.com/Documents
+./gradlew :server:fatJar
+aws lambda update-function-code \
+  --function-name arn:aws:lambda:ap-south-1:291759414836:function:guardianlink-api \
+  --zip-file fileb:///Users/pavudi605@apac.comcast.com/Documents/server/build/libs/server-all-1.0.0.jar \
+  --region ap-south-1
+aws lambda wait function-updated \
+  --function-name arn:aws:lambda:ap-south-1:291759414836:function:guardianlink-api \
+  --region ap-south-1
+./gradlew :composeApp:installDebug
+```
+
+Expected runtime behavior:
+- SOS push is sent to all contacts included in payload (with valid endpoint mapping).
+- On receiving device, push appears in notification tray.
+- On tap, app opens SOS detail page showing:
+  - victim name
+  - constant help text (`<victimName> might need help`)
+  - live location coordinates if shared
 
 ---
 

@@ -6,6 +6,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import com.example.guardianlink.MonitoringServiceController
+import ui.OFFLINE_MODE_NORMAL_SMS
 
 actual object AppStorage {
 
@@ -54,6 +55,18 @@ actual object AppStorage {
     actual fun isVoiceChoice(): Boolean = prefs.getBoolean(KEY_VOICE_CHOICE, false)
     actual fun setVoiceChoice(enabled: Boolean) { prefs.edit().putBoolean(KEY_VOICE_CHOICE, enabled).commit() }
 
+    actual fun getOfflineFallbackMode(): String =
+        prefs.getString(KEY_OFFLINE_FALLBACK_MODE, OFFLINE_MODE_NORMAL_SMS).orEmpty()
+
+    actual fun setOfflineFallbackMode(mode: String) {
+        prefs.edit().putString(KEY_OFFLINE_FALLBACK_MODE, mode).commit()
+    }
+
+    actual fun getLastKnownOnline(): Boolean = prefs.getBoolean(KEY_LAST_KNOWN_ONLINE, true)
+    actual fun setLastKnownOnline(isOnline: Boolean) {
+        prefs.edit().putBoolean(KEY_LAST_KNOWN_ONLINE, isOnline).commit()
+    }
+
     // ── Session ─────────────────────────────────────────────
     actual fun logout() { prefs.edit().putBoolean(KEY_LOGGED_IN, false).commit() }
     actual fun clear() { prefs.edit().clear().commit() }
@@ -71,4 +84,6 @@ actual object AppStorage {
     private const val KEY_SAFE_PIN              = "safePin"
     private const val KEY_CONTINUOUS_MONITORING = "continuousMonitoring"
     private const val KEY_VOICE_CHOICE          = "voiceChoice"
+    private const val KEY_OFFLINE_FALLBACK_MODE = "offlineFallbackMode"
+    private const val KEY_LAST_KNOWN_ONLINE     = "lastKnownOnline"
 }

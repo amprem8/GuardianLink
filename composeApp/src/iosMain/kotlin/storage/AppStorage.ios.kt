@@ -3,6 +3,7 @@
 package storage
 
 import platform.Foundation.NSUserDefaults
+import ui.OFFLINE_MODE_NORMAL_SMS
 
 actual object AppStorage {
 
@@ -56,6 +57,21 @@ actual object AppStorage {
         defaults.setBool(enabled, forKey = KEY_VOICE_CHOICE); defaults.synchronize()
     }
 
+    actual fun getOfflineFallbackMode(): String =
+        defaults.stringForKey(KEY_OFFLINE_FALLBACK_MODE) ?: OFFLINE_MODE_NORMAL_SMS
+
+    actual fun setOfflineFallbackMode(mode: String) {
+        defaults.setObject(mode, forKey = KEY_OFFLINE_FALLBACK_MODE); defaults.synchronize()
+    }
+
+    actual fun getLastKnownOnline(): Boolean =
+        if (defaults.objectForKey(KEY_LAST_KNOWN_ONLINE) == null) true
+        else defaults.boolForKey(KEY_LAST_KNOWN_ONLINE)
+
+    actual fun setLastKnownOnline(isOnline: Boolean) {
+        defaults.setBool(isOnline, forKey = KEY_LAST_KNOWN_ONLINE); defaults.synchronize()
+    }
+
     // ── Session ─────────────────────────────────────────────
     actual fun logout() {
         defaults.setBool(false, forKey = KEY_LOGGED_IN); defaults.synchronize()
@@ -63,7 +79,8 @@ actual object AppStorage {
 
     actual fun clear() {
         listOf(KEY_REGISTERED, KEY_LOGGED_IN, KEY_USER_NAME, KEY_USER_EMAIL, KEY_PHONE,
-               KEY_CONTACTS_CONFIGURED, KEY_SAFE_PIN, KEY_CONTINUOUS_MONITORING, KEY_VOICE_CHOICE
+               KEY_CONTACTS_CONFIGURED, KEY_SAFE_PIN, KEY_CONTINUOUS_MONITORING, KEY_VOICE_CHOICE,
+               KEY_OFFLINE_FALLBACK_MODE, KEY_LAST_KNOWN_ONLINE
         ).forEach { defaults.removeObjectForKey(it) }
         defaults.synchronize()
     }
@@ -81,4 +98,6 @@ actual object AppStorage {
     private const val KEY_SAFE_PIN              = "safePin"
     private const val KEY_CONTINUOUS_MONITORING = "continuousMonitoring"
     private const val KEY_VOICE_CHOICE          = "voiceChoice"
+    private const val KEY_OFFLINE_FALLBACK_MODE = "offlineFallbackMode"
+    private const val KEY_LAST_KNOWN_ONLINE     = "lastKnownOnline"
 }

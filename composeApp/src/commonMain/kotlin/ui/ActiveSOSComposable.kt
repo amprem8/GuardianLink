@@ -71,6 +71,7 @@ import kotlin.math.pow
 import kotlin.math.round
 import kotlinx.coroutines.delay
 import model.EmergencyContact
+import network.SosPushApi
 
 // ── SOS Status Types ────────────────────────────────────────
 
@@ -114,8 +115,11 @@ data class NearbyBLEDevice(
 fun ActiveSOSScreen(
     contacts: List<EmergencyContact>,
     isOnline: Boolean,
+    offlineFallbackMode: String = OFFLINE_MODE_NORMAL_SMS,
     safePin: String = "",
     stopTimer: Boolean = false,
+    pushResponse: SosPushApi.SosPushResponse? = null,
+    pushError: String? = null,
     onCancel: () -> Unit,
 ) {
     var sosStatus by remember { mutableStateOf(SOSStatus.DETECTING) }
@@ -136,8 +140,53 @@ fun ActiveSOSScreen(
         }
     }
 
-    // ── Simulated SOS flow ──
-    LaunchedEffect(Unit) {
+    // ── Real backend status sync ──
+    LaunchedEffect(pushResponse, pushError, contacts) {
+        if (pushResponse == null && pushError == null) return@LaunchedEffect
+
+        if (pushError != null) {
+            sosStatus = SOSStatus.ONLINE_SENDING
+            contactStatuses = contacts.map {
+                ContactSOSStatus(contact = it, status = ContactDeliveryStatus.NO_ANSWER)
+            }
+            return@LaunchedEffect
+        }
+
+        val response = pushResponse ?: return@LaunchedEffect
+        sosStatus = if (response.allPublished) SOSStatus.SUCCESS else SOSStatus.ONLINE_SENDING
+
+        val byName = response.results.associateBy { it.contactName }
+        contactStatuses = contacts.map { contact ->
+            val result = byName[contact.name]
+            if (result == null) {
+                ContactSOSStatus(contact = contact, status = ContactDeliveryStatus.PENDING)
+            } else if (result.published) {
+                ContactSOSStatus(
+                    contact = contact,
+                    status = ContactDeliveryStatus.DELIVERED,
+                    method = when (result.deliveryMethod) {
+                        "SMS" -> DeliveryMethod.SMS
+                        else -> DeliveryMethod.INTERNET
+                    },
+                )
+            } else {
+                ContactSOSStatus(
+                    contact = contact,
+                    status = ContactDeliveryStatus.NO_ANSWER,
+                    method = when (result.deliveryMethod) {
+                        "SMS" -> DeliveryMethod.SMS
+                        "PUSH" -> DeliveryMethod.INTERNET
+                        else -> null
+                    },
+                )
+            }
+        }
+    }
+
+    // ── Simulated SOS flow (used only before real backend response arrives) ──
+    LaunchedEffect(isOnline, pushResponse, pushError, contacts) {
+        if (pushResponse != null || pushError != null) return@LaunchedEffect
+
         // Step 1: Detecting trigger
         delay(1000)
         sosStatus = SOSStatus.LOCATING
@@ -150,25 +199,7 @@ fun ActiveSOSScreen(
         // Step 3: Check connectivity
         delay(1000)
 
-        if (isOnline) {
-            // ── PATH 1: ONLINE ──
-            sosStatus = SOSStatus.ONLINE_SENDING
-            delay(1500)
-
-            for (i in contacts.indices) {
-                delay(500)
-                contactStatuses = contactStatuses.mapIndexed { idx, cs ->
-                    if (idx == i) cs.copy(status = ContactDeliveryStatus.SENT, method = DeliveryMethod.INTERNET)
-                    else cs
-                }
-                delay(400)
-                contactStatuses = contactStatuses.mapIndexed { idx, cs ->
-                    if (idx == i) cs.copy(status = ContactDeliveryStatus.DELIVERED) else cs
-                }
-            }
-            sosStatus = SOSStatus.SUCCESS
-        } else {
-            // ── PATH 2/3: OFFLINE ──
+        suspend fun runOfflineCallSmsFlow() {
             // Call contacts sequentially
             sosStatus = SOSStatus.CALLING_CONTACTS
             delay(1000)
@@ -230,8 +261,10 @@ fun ActiveSOSScreen(
                     }
                 }
             }
+        }
 
-            // BLE scan (simulate — always show in offline mode)
+        suspend fun runOfflineBleRelayFlow() {
+            // BLE scan (simulate)
             sosStatus = SOSStatus.BLE_SCANNING
             delay(800)
             nearbyDevices = listOf(
@@ -243,7 +276,7 @@ fun ActiveSOSScreen(
             nearbyDevices = nearbyDevices + NearbyBLEDevice("Unknown Device", "~15m", true, "Found")
             delay(800)
 
-            // Relay through online device
+            // Relay through an online nearby device
             sosStatus = SOSStatus.BLE_RELAYING
             nearbyDevices = nearbyDevices.mapIndexed { idx, d ->
                 if (idx == 0) d.copy(status = "Connecting...") else d
@@ -257,7 +290,34 @@ fun ActiveSOSScreen(
                 if (idx == 0) d.copy(status = "Relayed ✓") else d
             }
             delay(600)
+        }
 
+        if (isOnline) {
+            // ── PATH 1: ONLINE ──
+            sosStatus = SOSStatus.ONLINE_SENDING
+            delay(1500)
+
+            for (i in contacts.indices) {
+                delay(500)
+                contactStatuses = contactStatuses.mapIndexed { idx, cs ->
+                    if (idx == i) cs.copy(status = ContactDeliveryStatus.SENT, method = DeliveryMethod.INTERNET)
+                    else cs
+                }
+                delay(400)
+                contactStatuses = contactStatuses.mapIndexed { idx, cs ->
+                    if (idx == i) cs.copy(status = ContactDeliveryStatus.DELIVERED) else cs
+                }
+            }
+            sosStatus = SOSStatus.SUCCESS
+        } else {
+            // ── PATH 2/3: OFFLINE ──
+            if (offlineFallbackMode == OFFLINE_MODE_BLE_FIRST) {
+                runOfflineBleRelayFlow()
+                runOfflineCallSmsFlow()
+            } else {
+                runOfflineCallSmsFlow()
+                runOfflineBleRelayFlow()
+            }
             sosStatus = SOSStatus.SUCCESS
         }
     }
@@ -361,6 +421,7 @@ fun ActiveSOSScreen(
                 contactStatuses = contactStatuses,
                 someoneAnswered = someoneAnswered,
                 nearbyDevices = nearbyDevices,
+                pushError = pushError,
             )
 
             Spacer(Modifier.height(20.dp))
@@ -460,6 +521,7 @@ private fun StatusCard(
     contactStatuses: List<ContactSOSStatus>,
     someoneAnswered: Boolean,
     nearbyDevices: List<NearbyBLEDevice>,
+    pushError: String? = null,
 ) {
     Column(
         modifier = Modifier
@@ -497,6 +559,22 @@ private fun StatusCard(
             fontSize = 15.sp,
             lineHeight = 22.sp,
         )
+
+        if (!pushError.isNullOrBlank()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFFEF2F2), RoundedCornerShape(10.dp))
+                    .border(1.dp, Color(0xFFFECACA), RoundedCornerShape(10.dp))
+                    .padding(12.dp),
+            ) {
+                Text(
+                    text = "Push failed: $pushError",
+                    color = Color(0xFFB91C1C),
+                    fontSize = 13.sp,
+                )
+            }
+        }
 
         // Location badge
         AnimatedVisibility(visible = location != null, enter = fadeIn() + slideInVertically()) {

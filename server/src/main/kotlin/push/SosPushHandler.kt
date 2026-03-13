@@ -26,7 +26,7 @@ object SosPushHandler {
     data class SosContactTarget(
         val contactName: String,
         val phoneNumber: String? = null,
-        val endpointArn: String,
+        val endpointArn: String = "",
         val includeGPS: Boolean = false,
     )
 
@@ -45,6 +45,7 @@ object SosPushHandler {
         val messageId: String? = null,
         val error: String? = null,
         val locationIncluded: Boolean = false,
+        val deliveryMethod: String = "PUSH",
     )
 
     @Serializable
@@ -79,19 +80,13 @@ object SosPushHandler {
             if (req.contacts.isEmpty()) return HttpResponses.badRequest("contacts is required")
 
             val sosId = UUID.randomUUID().toString()
-            val baseBody = req.message?.takeIf { it.isNotBlank() }
-                ?: "${req.victimName} triggered SOS emergency alert"
+            val helpText = "${req.victimName} might need help"
+            val baseBody = req.message?.takeIf { it.isNotBlank() } ?: helpText
+            val publishedByTarget = mutableMapOf<String, String>()
 
             val results = req.contacts.map { contact ->
                 val resolvedEndpointArn = resolveEndpointArn(contact)
-                if (resolvedEndpointArn.isBlank()) {
-                    return@map ContactPublishResult(
-                        contactName = contact.contactName,
-                        published = false,
-                        error = "Missing endpointArn/phone mapping",
-                    )
-                }
-
+                val normalizedPhone = normalizePhone(contact.phoneNumber.orEmpty())
                 val shouldIncludeLocation = contact.includeGPS &&
                         req.location?.permissionGranted == true &&
                         req.location.gpsEnabled &&
@@ -103,6 +98,9 @@ object SosPushHandler {
                     "sosId" to sosId,
                     "victimUserId" to req.victimUserId,
                     "victimName" to req.victimName,
+                    "title" to "SOS Alert",
+                    "body" to baseBody,
+                    "helpText" to helpText,
                 )
 
                 if (shouldIncludeLocation) {
@@ -110,18 +108,79 @@ object SosPushHandler {
                     payload["lng"] = req.location.lng.toString()
                 }
 
+                val smsBody = buildString {
+                    append(baseBody)
+                    if (shouldIncludeLocation) {
+                        append("\nLocation: https://maps.google.com/?q=")
+                        append(req.location.lat)
+                        append(",")
+                        append(req.location.lng)
+                    }
+                }
+
                 try {
-                    val messageId = SnsPushClient.publishSos(
-                        endpointArn = resolvedEndpointArn,
-                        title = "SOS Alert",
-                        body = baseBody,
-                        data = payload,
+                    if (resolvedEndpointArn.isNotBlank()) {
+                        val targetKey = "PUSH:$resolvedEndpointArn"
+                        val existingMessageId = publishedByTarget[targetKey]
+                        if (existingMessageId != null) {
+                            return@map ContactPublishResult(
+                                contactName = contact.contactName,
+                                published = true,
+                                messageId = existingMessageId,
+                                locationIncluded = shouldIncludeLocation,
+                                deliveryMethod = "PUSH",
+                            )
+                        }
+
+                        val messageId = SnsPushClient.publishSos(
+                            endpointArn = resolvedEndpointArn,
+                            title = "SOS Alert",
+                            body = baseBody,
+                            data = payload,
+                        )
+                        publishedByTarget[targetKey] = messageId
+                        return@map ContactPublishResult(
+                            contactName = contact.contactName,
+                            published = true,
+                            messageId = messageId,
+                            locationIncluded = shouldIncludeLocation,
+                            deliveryMethod = "PUSH",
+                        )
+                    }
+
+                    if (normalizedPhone.isBlank()) {
+                        return@map ContactPublishResult(
+                            contactName = contact.contactName,
+                            published = false,
+                            error = "Missing endpointArn/phone mapping",
+                            locationIncluded = shouldIncludeLocation,
+                            deliveryMethod = "NONE",
+                        )
+                    }
+
+                    val targetKey = "SMS:$normalizedPhone"
+                    val existingMessageId = publishedByTarget[targetKey]
+                    if (existingMessageId != null) {
+                        return@map ContactPublishResult(
+                            contactName = contact.contactName,
+                            published = true,
+                            messageId = existingMessageId,
+                            locationIncluded = shouldIncludeLocation,
+                            deliveryMethod = "SMS",
+                        )
+                    }
+
+                    val messageId = SnsPushClient.publishSms(
+                        phoneNumberE164 = toE164(normalizedPhone),
+                        body = smsBody,
                     )
+                    publishedByTarget[targetKey] = messageId
                     ContactPublishResult(
                         contactName = contact.contactName,
                         published = true,
                         messageId = messageId,
                         locationIncluded = shouldIncludeLocation,
+                        deliveryMethod = "SMS",
                     )
                 } catch (e: Exception) {
                     ContactPublishResult(
@@ -129,6 +188,7 @@ object SosPushHandler {
                         published = false,
                         error = e::class.simpleName ?: "PublishError",
                         locationIncluded = shouldIncludeLocation,
+                        deliveryMethod = if (resolvedEndpointArn.isNotBlank()) "PUSH" else "SMS",
                     )
                 }
             }
@@ -165,6 +225,8 @@ object SosPushHandler {
         if (digits.isEmpty()) return ""
         return if (digits.length > 10) digits.takeLast(10) else digits
     }
+
+    private fun toE164(tenDigitPhone: String): String = "+91$tenDigitPhone"
 }
 
 

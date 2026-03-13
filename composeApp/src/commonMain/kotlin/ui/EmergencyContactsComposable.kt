@@ -520,6 +520,7 @@ private fun AddContactDialog(
     onDismiss: () -> Unit,
     onLoadDeviceContacts: () -> Unit,
 ) {
+    val focusManager = LocalFocusManager.current
     var isManualMode by remember { mutableStateOf(true) }
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -537,7 +538,7 @@ private fun AddContactDialog(
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
-            ) { /* consume tap */ },
+            ) { focusManager.clearFocus(force = true) },
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -846,7 +847,7 @@ private fun ManualEntryFields(
                 value = name,
                 onValueChange = { if (it.length <= 10) onNameChange(it) },
                 singleLine = true,
-                placeholder = { Text("Contact name (max 10 chars)", color = Color(0xFF9CA3AF)) },
+                placeholder = { Text("Contact name", color = Color(0xFF9CA3AF)) },
                 leadingIcon = { Icon(Icons.Filled.Person, null, tint = Color(0xFF9CA3AF)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),

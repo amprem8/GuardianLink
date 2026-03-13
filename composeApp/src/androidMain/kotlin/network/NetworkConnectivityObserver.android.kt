@@ -11,6 +11,7 @@ import android.net.NetworkRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import storage.AppStorage
 
 actual object NetworkConnectivityObserver {
 
@@ -29,8 +30,10 @@ actual object NetworkConnectivityObserver {
     fun init(context: Context) {
         appContext = context.applicationContext
         connectivityManager = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        // Read initial state immediately
+        // Use the persisted value first, then refresh from current connectivity.
+        _isOnline.value = AppStorage.getLastKnownOnline()
         _isOnline.value = checkCurrentConnectivity()
+        AppStorage.setLastKnownOnline(_isOnline.value)
     }
 
     actual fun start() {
@@ -69,11 +72,13 @@ actual object NetworkConnectivityObserver {
         override fun onAvailable(network: Network) {
             activeNetworks.add(network)
             _isOnline.value = true
+            AppStorage.setLastKnownOnline(true)
         }
 
         override fun onLost(network: Network) {
             activeNetworks.remove(network)
             _isOnline.value = activeNetworks.isNotEmpty()
+            AppStorage.setLastKnownOnline(_isOnline.value)
         }
 
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
@@ -85,6 +90,7 @@ actual object NetworkConnectivityObserver {
                 activeNetworks.remove(network)
             }
             _isOnline.value = activeNetworks.isNotEmpty()
+            AppStorage.setLastKnownOnline(_isOnline.value)
         }
     }
 }

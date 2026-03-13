@@ -17,12 +17,15 @@ import com.google.firebase.messaging.FirebaseMessaging
 import gesture.GestureDetectionEngine
 import network.NetworkConnectivityObserver
 import screens.initTriggerConfigPlatform
+import session.SosAlertSession
 import storage.AppStorage
 import storage.ContactStorage
 import storage.TriggerConfigStorage
 import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
+    private var lastHandledSosId: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -35,8 +38,10 @@ class MainActivity : ComponentActivity() {
         GestureDetectionEngine.init(this)
         NetworkConnectivityObserver.init(this)
         NetworkConnectivityObserver.start()
+        PushRegistrationSync.init(this)
         initTriggerConfigPlatform(this)
         MonitoringServiceController.syncWithStoredPreference(this)
+        handleIncomingSosIntent(intent)
 
         setContent {
             App()
@@ -45,7 +50,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        handleIncomingSosIntent(intent)
         logFcmToken()
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingSosIntent(intent)
     }
 
     @SuppressLint("RestrictedApi")
@@ -66,6 +78,7 @@ class MainActivity : ComponentActivity() {
         FirebaseMessaging.getInstance().token
             .addOnSuccessListener { token ->
                 Log.d("FCM_TOKEN", token)
+                PushRegistrationSync.sync(fcmToken = token, reason = "app_start")
             }
             .addOnFailureListener { error ->
                 Log.w("FCM_TOKEN", "Failed to fetch FCM token", error)
@@ -125,6 +138,41 @@ class MainActivity : ComponentActivity() {
         }.onFailure {
             Log.w("FCM_TOKEN", "Firebase asset init failed", it)
         }.getOrNull()
+    }
+
+    private fun handleIncomingSosIntent(intent: android.content.Intent?) {
+        val src = intent?.getStringExtra("type")
+        if (src != "SOS_ALERT") return
+
+        val victimName = intent.getStringExtra("victimName")?.ifBlank { null } ?: return
+        val sosId = intent.getStringExtra("sosId")?.ifBlank { null } ?: "sos-${System.currentTimeMillis()}"
+        if (sosId == lastHandledSosId) return
+        lastHandledSosId = sosId
+
+        val helpText = intent.getStringExtra("helpText")
+            ?.ifBlank { null }
+            ?: "$victimName might need help"
+
+        val lat = intent.getStringExtra("lat")?.toDoubleOrNull()
+        val lng = intent.getStringExtra("lng")?.toDoubleOrNull()
+
+        SosAlertSession.set(
+            SosAlertSession.Alert(
+                sosId = sosId,
+                victimName = victimName,
+                helpText = helpText,
+                lat = lat,
+                lng = lng,
+            )
+        )
+
+        // Consume extras so onStart does not retrigger the same alert navigation repeatedly.
+        intent.removeExtra("type")
+        intent.removeExtra("sosId")
+        intent.removeExtra("victimName")
+        intent.removeExtra("helpText")
+        intent.removeExtra("lat")
+        intent.removeExtra("lng")
     }
 }
 

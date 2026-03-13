@@ -14,10 +14,11 @@ import platform.Network.nw_path_monitor_start
 import platform.Network.nw_path_monitor_t
 import platform.Network.nw_path_status_satisfied
 import platform.darwin.dispatch_get_main_queue
+import storage.AppStorage
 
 actual object NetworkConnectivityObserver {
 
-    private val _isOnline = MutableStateFlow(true)
+    private val _isOnline = MutableStateFlow(AppStorage.getLastKnownOnline())
     actual val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
 
     private var monitor: nw_path_monitor_t? = null
@@ -35,6 +36,7 @@ actual object NetworkConnectivityObserver {
         nw_path_monitor_set_update_handler(pathMonitor) { path ->
             val status = nw_path_get_status(path)
             _isOnline.value = (status == nw_path_status_satisfied)
+            AppStorage.setLastKnownOnline(_isOnline.value)
         }
 
         nw_path_monitor_start(pathMonitor)

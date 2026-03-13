@@ -48,6 +48,14 @@ expect object AppStorage {
     fun isVoiceChoice(): Boolean
     fun setVoiceChoice(enabled: Boolean)
 
+    /** Offline SOS fallback mode (`normal_sms` or `ble_first`). */
+    fun getOfflineFallbackMode(): String
+    fun setOfflineFallbackMode(mode: String)
+
+    /** Persist and retrieve last-known connectivity for stable startup UI state. */
+    fun getLastKnownOnline(): Boolean
+    fun setLastKnownOnline(isOnline: Boolean)
+
     // ── Session ─────────────────────────────────────────────
 
     /** Clear login session but keep registration data (user can re-login). */

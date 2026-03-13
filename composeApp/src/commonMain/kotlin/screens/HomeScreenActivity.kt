@@ -21,6 +21,7 @@ import storage.TriggerConfigStorage
 import ui.HomeActions
 import ui.HomeScreen
 import ui.HomeUiState
+import ui.OFFLINE_MODE_NORMAL_SMS
 import ui.PermissionsUiState
 
 class HomeScreenActivity : Screen {
@@ -39,6 +40,7 @@ class HomeScreenActivity : Screen {
         // Monitoring toggles — mutable so UI reacts immediately without recompose from storage
         var continuousMonitoring by remember { mutableStateOf(AppStorage.isContinuousMonitoring()) }
         var voiceChoice          by remember { mutableStateOf(AppStorage.isVoiceChoice()) }
+        var offlineFallbackMode  by remember { mutableStateOf(AppStorage.getOfflineFallbackMode()) }
 
         val locationPerm     = rememberLocationPermission()
         val microphonePerm   = rememberMicrophonePermission()
@@ -61,13 +63,20 @@ class HomeScreenActivity : Screen {
             voicePhrase          = triggerConfig.voicePhrase,
             gestureType          = triggerConfig.gestureType,
             isOnline             = isOnline,
+            offlineFallbackMode  = offlineFallbackMode,
             continuousMonitoring = continuousMonitoring,
             voiceChoice          = voiceChoice,
             permissions          = permissionsState,
         )
 
         val actions = HomeActions(
-            onTriggerSOS  = { navigator?.push(ActiveSOSActivity()) },
+            onTriggerSOS  = {
+                navigator?.push(
+                    ActiveSOSActivity(
+                        offlineFallbackMode = offlineFallbackMode.ifBlank { OFFLINE_MODE_NORMAL_SMS },
+                    )
+                )
+            },
             onEditContacts = { navigator?.push(EmergencyContactsActivity(isSetupFlow = false)) },
             onEditConfig  = { navigator?.push(TriggerConfigActivity()) },
             onProfileClick = { navigator?.push(ProfileScreenActivity()) },
@@ -83,6 +92,10 @@ class HomeScreenActivity : Screen {
             onSetVoiceChoice = { enabled ->
                 AppStorage.setVoiceChoice(enabled)
                 voiceChoice = enabled
+            },
+            onSetOfflineFallbackMode = { mode ->
+                AppStorage.setOfflineFallbackMode(mode)
+                offlineFallbackMode = mode
             },
         )
 

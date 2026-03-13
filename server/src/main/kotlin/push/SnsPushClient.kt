@@ -8,9 +8,21 @@ import kotlinx.serialization.json.putJsonObject
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.sns.SnsClient
+import software.amazon.awssdk.services.sns.model.CreatePlatformEndpointRequest
 import software.amazon.awssdk.services.sns.model.PublishRequest
+import software.amazon.awssdk.services.sns.model.SetEndpointAttributesRequest
+import software.amazon.awssdk.services.sns.model.SnsException
 
 object SnsPushClient {
+    private val androidPlatformApplicationArn: String by lazy {
+        System.getenv("SNS_ANDROID_PLATFORM_APP_ARN")
+            .orEmpty()
+            .trim()
+            .ifEmpty {
+                throw IllegalStateException("SNS_ANDROID_PLATFORM_APP_ARN is not configured")
+            }
+    }
+
 
     private val json = Json { encodeDefaults = true }
 
@@ -32,13 +44,11 @@ object SnsPushClient {
         data: Map<String, String>,
     ): String {
         val gcm = buildJsonObject {
-            put("notification", buildJsonObject {
-                put("title", title)
-                put("body", body)
-                put("sound", "default")
-            })
+            put("priority", "high")
             putJsonObject("data") {
                 data.forEach { (k, v) -> put(k, v) }
+                put("title", title)
+                put("body", body)
             }
         }
 
@@ -70,6 +80,71 @@ object SnsPushClient {
             .build()
 
         return client.publish(req).messageId()
+    }
+
+    fun createAndroidEndpoint(fcmToken: String): String {
+        val token = fcmToken.trim()
+        require(token.isNotEmpty()) { "fcmToken is required" }
+
+        val req = CreatePlatformEndpointRequest.builder()
+            .platformApplicationArn(androidPlatformApplicationArn)
+            .token(token)
+            .build()
+
+        return try {
+            client.createPlatformEndpoint(req).endpointArn()
+        } catch (e: SnsException) {
+            val existingArn = extractExistingEndpointArn(e.message)
+            if (existingArn != null) {
+                upsertEndpointAttributes(existingArn, token)
+                existingArn
+            } else {
+                throw e
+            }
+        }
+    }
+
+    fun upsertEndpointAttributes(endpointArn: String, fcmToken: String) {
+        val arn = endpointArn.trim()
+        val token = fcmToken.trim()
+        require(arn.isNotEmpty()) { "endpointArn is required" }
+        require(token.isNotEmpty()) { "fcmToken is required" }
+
+        val req = SetEndpointAttributesRequest.builder()
+            .endpointArn(arn)
+            .attributes(
+                mapOf(
+                    "Token" to token,
+                    "Enabled" to "true",
+                )
+            )
+            .build()
+
+        client.setEndpointAttributes(req)
+    }
+
+    /**
+     * SMS fallback for emergency contacts who do not have app push endpoint registered.
+     */
+    fun publishSms(phoneNumberE164: String, body: String): String {
+        val req = PublishRequest.builder()
+            .phoneNumber(phoneNumberE164)
+            .message(body)
+            .build()
+
+        return client.publish(req).messageId()
+    }
+
+    private fun extractExistingEndpointArn(message: String?): String? {
+        if (message.isNullOrBlank()) return null
+        val marker = "Endpoint "
+        val start = message.indexOf(marker)
+        if (start < 0) return null
+        val from = start + marker.length
+        val end = message.indexOf(" already exists", from)
+        if (end <= from) return null
+        val arn = message.substring(from, end).trim()
+        return arn.ifEmpty { null }
     }
 }
 

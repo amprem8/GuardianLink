@@ -81,6 +81,7 @@ data class HomeUiState(
     val voicePhrase: String,
     val gestureType: String,
     val isOnline: Boolean,
+    val offlineFallbackMode: String = OFFLINE_MODE_NORMAL_SMS,
     val continuousMonitoring: Boolean = true,
     val voiceChoice: Boolean = true,
     val permissions: PermissionsUiState? = null,
@@ -94,7 +95,11 @@ data class HomeActions(
     val onProfileClick: () -> Unit = {},
     val onSetContinuousMonitoring: (Boolean) -> Unit = {},
     val onSetVoiceChoice: (Boolean) -> Unit = {},
+    val onSetOfflineFallbackMode: (String) -> Unit = {},
 )
+
+const val OFFLINE_MODE_NORMAL_SMS = "normal_sms"
+const val OFFLINE_MODE_BLE_FIRST = "ble_first"
 
 @Composable
 fun HomeScreen(
@@ -102,6 +107,7 @@ fun HomeScreen(
     actions: HomeActions
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
+    var showOfflineModeDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = Color(0xFFF8FAFC),
@@ -143,12 +149,29 @@ fun HomeScreen(
             SOSButton(actions.onTriggerSOS)
             ContactsSection(state.contacts, actions.onEditContacts)
             ConfigSection(state.voicePhrase, state.gestureType, actions.onEditConfig)
+            if (!state.isOnline) {
+                OfflineFallbackModeSection(
+                    mode = state.offlineFallbackMode,
+                    onChooseMode = { showOfflineModeDialog = true },
+                )
+            }
             if (state.permissions != null) {
                 PermissionsSection(state.permissions)
             }
             HybridInfoSection()
             Spacer(Modifier.height(8.dp))
         }
+    }
+
+    if (showOfflineModeDialog) {
+        OfflineModePickerDialog(
+            selectedMode = state.offlineFallbackMode,
+            onDismiss = { showOfflineModeDialog = false },
+            onSelect = { mode ->
+                actions.onSetOfflineFallbackMode(mode)
+                showOfflineModeDialog = false
+            },
+        )
     }
 }
 
@@ -665,6 +688,141 @@ private fun ConfigSection(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun OfflineFallbackModeSection(
+    mode: String,
+    onChooseMode: () -> Unit,
+) {
+    DashboardCard(onClick = onChooseMode) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color(0xFFFFEDD5), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("📡", fontSize = 22.sp)
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Offline Rescue Mode",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = Color(0xFF111827),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Choose how SOS runs when internet is unavailable",
+                    color = Color(0xFF6B7280),
+                    fontSize = 13.sp,
+                )
+                Spacer(Modifier.height(10.dp))
+                Chip(
+                    text = if (mode == OFFLINE_MODE_BLE_FIRST) "BLE First" else "Normal SMS",
+                    bg = Color(0xFFFFF7ED),
+                    fg = Color(0xFF9A3412),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OfflineModePickerDialog(
+    selectedMode: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+            shape = RoundedCornerShape(18.dp),
+            color = Color.White,
+            shadowElevation = 12.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "Offline Rescue Mode",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF111827),
+                )
+                Text(
+                    text = "Pick the first fallback step when the device is offline.",
+                    fontSize = 13.sp,
+                    color = Color(0xFF4B5563),
+                )
+
+                OfflineModeOption(
+                    title = "Normal SMS",
+                    subtitle = "Try call/SMS flow first, then BLE relay if needed",
+                    selected = selectedMode == OFFLINE_MODE_NORMAL_SMS,
+                    onClick = { onSelect(OFFLINE_MODE_NORMAL_SMS) },
+                )
+
+                OfflineModeOption(
+                    title = "BLE First",
+                    subtitle = "Try nearby BLE relay first, then send SMS/calls",
+                    selected = selectedMode == OFFLINE_MODE_BLE_FIRST,
+                    onClick = { onSelect(OFFLINE_MODE_BLE_FIRST) },
+                )
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFE5E7EB),
+                        contentColor = Color(0xFF111827),
+                    ),
+                ) {
+                    Text("Close", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OfflineModeOption(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) Color(0xFFDBEAFE) else Color(0xFFF9FAFB))
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color(0xFF111827))
+            Text(subtitle, fontSize = 12.sp, color = Color(0xFF6B7280))
+        }
+        if (selected) {
+            Text("✓", fontWeight = FontWeight.Bold, color = Color(0xFF1D4ED8), fontSize = 16.sp)
         }
     }
 }
