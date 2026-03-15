@@ -269,12 +269,20 @@ object SosPushHandler {
     }
 
     private fun resolveEndpointArn(contact: SosContactTarget): String {
+        // 1. Use the ARN passed directly in the request (future-proofing / client-side lookup)
         val direct = contact.endpointArn.trim()
         if (direct.isNotEmpty()) return direct
 
         val normalizedPhone = normalizePhone(contact.phoneNumber.orEmpty())
         if (normalizedPhone.isEmpty()) return ""
 
+        // 2. Look up from DynamoDB — this is the live, always-current registration store
+        val fromDb = runCatching {
+            SnsEndpointRegistry.getEndpointsByPhone(normalizedPhone).firstOrNull().orEmpty()
+        }.getOrElse { "" }
+        if (fromDb.isNotEmpty()) return fromDb
+
+        // 3. Fallback to static env-var map (legacy / manual override)
         return phoneEndpointMap[normalizedPhone].orEmpty()
     }
 
