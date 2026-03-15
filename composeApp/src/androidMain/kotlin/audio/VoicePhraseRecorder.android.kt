@@ -50,73 +50,80 @@ actual class VoicePhraseRecorder actual constructor() {
         onPitch: (Float) -> Unit,
         onBass:  (Float) -> Unit,
     ) {
+        // Ensure stale instances do not hold the microphone.
+        stopQuietly()
         this.outputPath = outputPath
 
-        // ── 1. MediaRecorder: AAC-LC into M4A ────────────────────────
-        // On API 31+ the constructor requires a real Context — use the stored appContext.
-        val mr = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(appContext)          // ← real context, NOT Application()
-        } else {
-            @Suppress("DEPRECATION")
-            MediaRecorder()
-        }
-        mr.apply {
-            setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setAudioEncodingBitRate(128_000)
-            setAudioSamplingRate(44100)
-            setAudioChannels(1)
-            setOutputFile(outputPath)
-            prepare()
-            start()
-        }
-        mediaRecorder = mr
-
-        // ── 2. AudioRecord: parallel PCM for analysis ───────────────
-        val minBuf = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
-        val bufSize = maxOf(minBuf, FRAME_SIZE * 2 * 4)
-        val ar = AudioRecord(
-            MediaRecorder.AudioSource.VOICE_RECOGNITION,
-            SAMPLE_RATE,
-            CHANNEL_CONFIG,
-            AUDIO_FORMAT,
-            bufSize,
-        )
-        audioRecord = ar
-
-        // Attach hardware noise suppressor if available
-        if (NoiseSuppressor.isAvailable()) {
-            noiseSuppressor = NoiseSuppressor.create(ar.audioSessionId)
-            noiseSuppressor?.enabled = true
-        }
-
-        ar.startRecording()
-
-        // ── 3. Coroutine: read PCM → pitch + bass ───────────────────
-        analysisJob = CoroutineScope(Dispatchers.IO).launch {
-            val buffer = ShortArray(FRAME_SIZE)
-            var accumulated = 0
-
-            while (isActive) {
-                val read = ar.read(buffer, 0, FRAME_SIZE)
-                if (read <= 0) continue
-
-                accumulated += read
-                if (accumulated < ANALYSIS_STRIDE) continue
-                accumulated = 0
-
-                val floats = FloatArray(read) { buffer[it] / 32768f }
-
-                // Apply Hann window to reduce spectral leakage
-                val windowed = applyHannWindow(floats)
-
-                val pitch = estimatePitchYin(windowed, SAMPLE_RATE)
-                val bass  = computeBassRms(windowed, SAMPLE_RATE)
-
-                onPitch(pitch)
-                onBass(bass)
+        try {
+            // ── 1. MediaRecorder: AAC-LC into M4A ────────────────────────
+            // On API 31+ the constructor requires a real Context — use the stored appContext.
+            val mr = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(appContext)          // ← real context, NOT Application()
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
             }
+            mr.apply {
+                setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setAudioEncodingBitRate(128_000)
+                setAudioSamplingRate(44100)
+                setAudioChannels(1)
+                setOutputFile(outputPath)
+                prepare()
+                start()
+            }
+            mediaRecorder = mr
+
+            // ── 2. AudioRecord: parallel PCM for analysis ───────────────
+            val minBuf = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
+            val bufSize = maxOf(minBuf, FRAME_SIZE * 2 * 4)
+            val ar = AudioRecord(
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                SAMPLE_RATE,
+                CHANNEL_CONFIG,
+                AUDIO_FORMAT,
+                bufSize,
+            )
+            audioRecord = ar
+
+            // Attach hardware noise suppressor if available
+            if (NoiseSuppressor.isAvailable()) {
+                noiseSuppressor = NoiseSuppressor.create(ar.audioSessionId)
+                noiseSuppressor?.enabled = true
+            }
+
+            ar.startRecording()
+
+            // ── 3. Coroutine: read PCM → pitch + bass ───────────────────
+            analysisJob = CoroutineScope(Dispatchers.IO).launch {
+                val buffer = ShortArray(FRAME_SIZE)
+                var accumulated = 0
+
+                while (isActive) {
+                    val read = ar.read(buffer, 0, FRAME_SIZE)
+                    if (read <= 0) continue
+
+                    accumulated += read
+                    if (accumulated < ANALYSIS_STRIDE) continue
+                    accumulated = 0
+
+                    val floats = FloatArray(read) { buffer[it] / 32768f }
+
+                    // Apply Hann window to reduce spectral leakage
+                    val windowed = applyHannWindow(floats)
+
+                    val pitch = estimatePitchYin(windowed, SAMPLE_RATE)
+                    val bass  = computeBassRms(windowed, SAMPLE_RATE)
+
+                    onPitch(pitch)
+                    onBass(bass)
+                }
+            }
+        } catch (t: Throwable) {
+            stopQuietly()
+            throw IllegalStateException("Unable to start voice recording", t)
         }
     }
 
@@ -127,11 +134,11 @@ actual class VoicePhraseRecorder actual constructor() {
         noiseSuppressor?.release()
         noiseSuppressor = null
 
-        audioRecord?.stop()
+        runCatching { audioRecord?.stop() }
         audioRecord?.release()
         audioRecord = null
 
-        mediaRecorder?.stop()
+        runCatching { mediaRecorder?.stop() }
         mediaRecorder?.release()
         mediaRecorder = null
 
@@ -140,6 +147,10 @@ actual class VoicePhraseRecorder actual constructor() {
 
     actual fun release() {
         stop()
+    }
+
+    private fun stopQuietly() {
+        runCatching { stop() }
     }
 
     // ────────────────────────────────────────────────────────────────

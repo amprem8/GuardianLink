@@ -167,23 +167,33 @@ class TriggerConfigScreenModel : ScreenModel {
         voiceDetected      = false
 
         recorder = VoicePhraseRecorder()
-        recorder!!.start(
-            outputPath = outputPath,
-            onPitch    = { /* pitch (Hz) – not used for VAD */ },
-            // onBass emits normalised RMS (0..1) — correct signal for voice-activity detection
-            onBass = { bassLevel ->
-                if (bassLevel >= VOICE_THRESHOLD) {
-                    voiceDetected = true
-                    // Reset the tail timer on every active frame so we don't cut off
-                    // while the user is still speaking
-                    voiceDetectedJob?.cancel()
-                    voiceDetectedJob = screenModelScope.launch {
-                        delay(TAIL_AFTER_VOICE_MS)
-                        stopAndUpload()
+        try {
+            recorder!!.start(
+                outputPath = outputPath,
+                onPitch    = { /* pitch (Hz) – not used for VAD */ },
+                // onBass emits normalised RMS (0..1) — correct signal for voice-activity detection
+                onBass = { bassLevel ->
+                    if (bassLevel >= VOICE_THRESHOLD) {
+                        voiceDetected = true
+                        // Reset the tail timer on every active frame so we don't cut off
+                        // while the user is still speaking
+                        voiceDetectedJob?.cancel()
+                        voiceDetectedJob = screenModelScope.launch {
+                            delay(TAIL_AFTER_VOICE_MS)
+                            stopAndUpload()
+                        }
                     }
-                }
-            },
-        )
+                },
+            )
+        } catch (_: Throwable) {
+            recorder?.release()
+            recorder = null
+            _isRecording.value = false
+            _uploadState.value = UploadState.Error(
+                "Microphone unavailable. Please grant microphone permission and try again."
+            )
+            return
+        }
         _isRecording.value = true
 
         // Hard-cap timer: stop after MAX_RECORDING_MS no matter what

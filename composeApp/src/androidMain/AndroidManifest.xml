@@ -31,9 +31,9 @@
         Foreground service: keeps the SOS gesture/voice listener alive in background.
         Types declared on the <service> element below per Android 14+ requirements.
     -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"
+        tools:ignore="ForegroundServicesPolicy" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <!-- Notifications (push alerts to contacts) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -61,12 +61,14 @@
         <!--
             SOS foreground service: listens for gesture + voice triggers in background.
             Android 14+ (API 34) requires foregroundServiceType to be declared here.
-            Using location + microphone types since the SOS engine needs both.
+            Using location type for always-on background monitoring.
+            Microphone FGS type can be re-added when voice capture starts from an
+            active foreground user flow with runtime audio permission granted.
         -->
         <service
             android:name=".SOSForegroundService"
             android:exported="false"
-            android:foregroundServiceType="location|microphone"
+            android:foregroundServiceType="location"
             tools:node="merge" />
 
         <service

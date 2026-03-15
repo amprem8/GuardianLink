@@ -32,7 +32,7 @@ import util.nowTimestampText
  * when the app is in the background.
  *
  * Android 14+ (API 34) requires:
- *  - foregroundServiceType declared in AndroidManifest.xml (location|microphone)
+ *  - foregroundServiceType declared in AndroidManifest.xml
  *  - Corresponding runtime permissions granted before starting the service
  *
  * This is currently a structural stub. The actual gesture/voice detection logic
@@ -62,17 +62,22 @@ class SOSForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = buildNotification()
 
-        // Android 14+ requires foregroundServiceType at start time
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ServiceCompat.startForeground(
-                this,
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        // Keep FGS type to location only for background eligibility on Android 14+.
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                ServiceCompat.startForeground(
+                    this,
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (se: SecurityException) {
+            Log.w(TAG, "Unable to enter foreground mode for SOS service", se)
+            stopSelf()
+            return START_NOT_STICKY
         }
 
         if (!AppStorage.isContinuousMonitoring()) {

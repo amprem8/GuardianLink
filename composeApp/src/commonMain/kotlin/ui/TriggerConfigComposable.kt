@@ -70,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import permissions.rememberMicrophonePermission
 import screenmodel.PRESET_PHRASES
 import screenmodel.GestureTestState
 import screenmodel.UploadState
@@ -339,6 +340,8 @@ private fun BannerRow(
 
 @Composable
 private fun VoiceCommandCard(state: TriggerConfigUiState, actions: TriggerConfigActions) {
+    val microphonePermission = rememberMicrophonePermission()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -381,10 +384,51 @@ private fun VoiceCommandCard(state: TriggerConfigUiState, actions: TriggerConfig
 
         Spacer(Modifier.height(20.dp))
 
+        if (!microphonePermission.isGranted) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFFFF7ED), RoundedCornerShape(12.dp))
+                    .border(1.dp, Color(0xFFFED7AA), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(Icons.Filled.Warning, null, tint = Color(0xFF9A3412), modifier = Modifier.size(18.dp))
+                Text(
+                    "Microphone permission is required to test voice.",
+                    modifier = Modifier.weight(1f),
+                    color = Color(0xFF9A3412),
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Button(
+                onClick = microphonePermission.launchRequest,
+                modifier = Modifier.fillMaxWidth().height(46.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF111827)),
+            ) {
+                Text("Allow Microphone", color = Color.White, fontWeight = FontWeight.SemiBold)
+            }
+
+            Spacer(Modifier.height(12.dp))
+        }
+
         // ── Test voice recognition button ──────────────────────
         if (!state.isRecording) {
             Button(
-                onClick = actions.onTestVoice,
+                onClick = {
+                    if (microphonePermission.isGranted) {
+                        actions.onTestVoice()
+                    } else {
+                        microphonePermission.launchRequest()
+                    }
+                },
+                enabled = microphonePermission.isGranted,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
