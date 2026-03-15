@@ -4,5 +4,21 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+
+	<!-- Location -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>ResQ needs your location to share it with emergency contacts when you trigger an SOS.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>ResQ needs background location access so your position can be shared even when the app is in the background during an emergency.</string>
+
+	<!-- Microphone -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ResQ needs microphone access to record a short audio clip and detect your voice command during an emergency.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>ResQ uses speech recognition to detect your emergency voice trigger phrase.</string>
+
+	<!-- Contacts (already used) -->
+	<key>NSContactsUsageDescription</key>
+	<string>ResQ needs access to your contacts so you can select emergency contacts.</string>
 </dict>
 </plist>

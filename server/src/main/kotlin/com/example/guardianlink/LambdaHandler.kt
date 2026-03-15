@@ -1,6 +1,9 @@
 package com.example.guardianlink
 
 import auth.OtpRoutes
+import push.PushRegistrationHandler
+import push.SosPushHandler
+import voice.VoiceUploadHandler
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent
@@ -23,27 +26,19 @@ class LambdaHandler : RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResp
 
         return try {
                 when (path) {
-                    "/signup" -> SignupHandler.handle(request, json)
-                    "/login"  -> LoginHandler.handle(request, json)
-                    "/otp/send" -> OtpRoutes.sendOtp(request)
-                    "/otp/verify" -> OtpRoutes.verifyOtp(request)
-                    else      -> HttpResponses.notFound()
+                    "/signup"        -> SignupHandler.handle(request, json)
+                    "/login"         -> LoginHandler.handle(request, json)
+                    "/otp/send"      -> OtpRoutes.sendOtp(request)
+                    "/otp/verify"    -> OtpRoutes.verifyOtp(request)
+                    "/voice/presign" -> VoiceUploadHandler.handlePresign(request)
+                    "/push/register" -> PushRegistrationHandler.handle(request)
+                    "/sos/push"      -> SosPushHandler.handle(request)
+                    else             -> HttpResponses.notFound()
                 }
         } catch (e: Exception) {
-            context.logger.log("ERROR: ${e.stackTraceToString()}")
-            HttpResponses.internalError()
+            context.logger.log("UNHANDLED ERROR [${e::class.simpleName}]: ${e.message}\n${e.stackTraceToString()}")
+            HttpResponses.internalError("${e::class.simpleName}: ${e.message?.take(200)}")
         }
     }
 
-    private fun response(status: Int, body: String) =
-        APIGatewayV2HTTPResponse.builder()
-            .withStatusCode(status)
-            .withHeaders(
-                mapOf(
-                    "Content-Type" to "application/json",
-                    "Access-Control-Allow-Origin" to "*"
-                )
-            )
-            .withBody(body)
-            .build()
 }

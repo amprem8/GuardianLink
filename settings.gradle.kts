@@ -1,4 +1,4 @@
-rootProject.name = "GuardianLink"
+rootProject.name = "ResQ"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
@@ -33,4 +33,3 @@ dependencyResolutionManagement {
 include(":composeApp")
 include(":server")
 include(":shared")
-include(":shared-core")

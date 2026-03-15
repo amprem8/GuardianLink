@@ -1,9 +1,10 @@
 import SwiftUI
-import Shared
+import ComposeApp
 
 struct ComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
-        return SOSViewControllerKt.SOSViewController()
+        let vc = MainViewControllerKt.MainViewController()
+        return vc
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
@@ -12,6 +13,7 @@ struct ComposeView: UIViewControllerRepresentable {
 struct ContentView: View {
     var body: some View {
         ComposeView()
-            .ignoresSafeArea()
+            .ignoresSafeArea(.keyboard) // only ignore keyboard, respect status bar
+            .persistentSystemOverlays(.hidden)
     }
 }
