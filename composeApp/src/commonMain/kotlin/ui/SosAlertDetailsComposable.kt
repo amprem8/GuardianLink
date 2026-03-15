@@ -31,6 +31,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.abs
+import kotlin.math.round
 import session.SosAlertSession
 
 @Composable
@@ -110,7 +112,7 @@ fun SosAlertDetailsScreen(
             Spacer(Modifier.height(4.dp))
 
             val locationText = if (alert.lat != null && alert.lng != null) {
-                "Lat: ${"%.6f".format(alert.lat)}\nLng: ${"%.6f".format(alert.lng)}"
+                "Lat: ${formatCoordinate(alert.lat!!)}\nLng: ${formatCoordinate(alert.lng!!)}"
             } else {
                 "Location unavailable"
             }
@@ -176,5 +178,13 @@ fun SosAlertDetailsScreen(
             }
         }
     }
+}
+
+private fun formatCoordinate(value: Double): String {
+    val sign = if (value < 0) "-" else ""
+    val scaled = round(abs(value) * 1_000_000.0).toLong()
+    val whole = scaled / 1_000_000
+    val fraction = (scaled % 1_000_000).toString().padStart(6, '0')
+    return "$sign$whole.$fraction"
 }
 
