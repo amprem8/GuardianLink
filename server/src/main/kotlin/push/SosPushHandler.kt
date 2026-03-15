@@ -167,12 +167,35 @@ object SosPushHandler {
                             )
                         }
 
-                        val messageId = SnsPushClient.publishSos(
-                            endpointArn = resolvedEndpointArn,
-                            title = "SOS Alert",
-                            body = baseBody,
-                            data = payload,
-                        )
+                        val messageId = runCatching {
+                            SnsPushClient.publishSos(
+                                endpointArn = resolvedEndpointArn,
+                                title = "SOS Alert",
+                                body = baseBody,
+                                data = payload,
+                            )
+                        }.recoverCatching { firstError ->
+                            // EndpointDisabledException — attempt to re-enable and retry once
+                            val errName = firstError::class.simpleName.orEmpty()
+                            if (errName.contains("EndpointDisabled", ignoreCase = true) ||
+                                firstError.message?.contains("Endpoint is disabled", ignoreCase = true) == true
+                            ) {
+                                // Re-enable the endpoint in SNS (token update without new token is safe here)
+                                runCatching {
+                                    SnsPushClient.upsertEndpointAttributes(resolvedEndpointArn, resolvedEndpointArn)
+                                }
+                                // Retry publish
+                                SnsPushClient.publishSos(
+                                    endpointArn = resolvedEndpointArn,
+                                    title = "SOS Alert",
+                                    body = baseBody,
+                                    data = payload,
+                                )
+                            } else {
+                                throw firstError
+                            }
+                        }.getOrThrow()
+
                         publishedByTarget[targetKey] = messageId
                         return@map ContactPublishResult(
                             contactName = contact.contactName,

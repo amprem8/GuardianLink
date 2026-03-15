@@ -19,6 +19,13 @@ object PushRegistrationSync {
         appContext = context.applicationContext
     }
 
+    fun syncFromService(context: Context, fcmToken: String, reason: String) {
+        if (!::appContext.isInitialized) {
+            appContext = context.applicationContext
+        }
+        sync(fcmToken, reason)
+    }
+
     fun sync(fcmToken: String, reason: String) {
         if (fcmToken.isBlank()) return
 

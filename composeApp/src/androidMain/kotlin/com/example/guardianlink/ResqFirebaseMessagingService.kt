@@ -43,6 +43,9 @@ class ResqFirebaseMessagingService : FirebaseMessagingService() {
         super.onNewToken(token)
         // Logs every time Firebase rotates/regenerates token.
         Log.d("FCM_TOKEN", token)
+        // Re-register with backend so SNS endpoint is always up-to-date.
+        // Uses syncFromService so it works even before MainActivity.onCreate runs.
+        PushRegistrationSync.syncFromService(this, fcmToken = token, reason = "token_refresh")
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

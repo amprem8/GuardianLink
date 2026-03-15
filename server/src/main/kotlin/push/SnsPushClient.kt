@@ -9,6 +9,7 @@ import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.sns.SnsClient
 import software.amazon.awssdk.services.sns.model.CreatePlatformEndpointRequest
+import software.amazon.awssdk.services.sns.model.GetEndpointAttributesRequest
 import software.amazon.awssdk.services.sns.model.PublishRequest
 import software.amazon.awssdk.services.sns.model.SetEndpointAttributesRequest
 import software.amazon.awssdk.services.sns.model.SnsException
@@ -115,12 +116,30 @@ object SnsPushClient {
             .attributes(
                 mapOf(
                     "Token" to token,
-                    "Enabled" to "true",
+                    "Enabled" to "true",   // re-enable if SNS disabled it after token rotation
                 )
             )
             .build()
 
         client.setEndpointAttributes(req)
+    }
+
+    /**
+     * Checks whether an SNS endpoint is disabled and re-enables it with the supplied token.
+     * Returns true if the endpoint was found and is now enabled.
+     */
+    fun reenableEndpointIfDisabled(endpointArn: String, fcmToken: String): Boolean {
+        return runCatching {
+            val attrs = client.getEndpointAttributes(
+                GetEndpointAttributesRequest.builder().endpointArn(endpointArn).build()
+            ).attributes()
+            val isEnabled = attrs["Enabled"]?.equals("true", ignoreCase = true) ?: false
+            val storedToken = attrs["Token"].orEmpty()
+            if (!isEnabled || storedToken != fcmToken) {
+                upsertEndpointAttributes(endpointArn, fcmToken)
+            }
+            true
+        }.getOrElse { false }
     }
 
     /**
