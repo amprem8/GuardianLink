@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "229654148617",
+    "project_id": "resq-d481d",
+    "storage_bucket": "resq-d481d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:229654148617:android:b1bd083643121d3f60ead8",
+        "android_client_info": {
+          "package_name": "com.example.guardianlink"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_-y0Gw1fUHyl2LN9XnLmg1BAH2gE3OMg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

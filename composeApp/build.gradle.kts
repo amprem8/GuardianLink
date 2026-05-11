@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    kotlin("plugin.serialization") version "2.3.0"
 }
 
 kotlin {
@@ -28,16 +29,35 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            implementation("androidx.security:security-crypto:1.1.0")
+            implementation("com.google.firebase:firebase-messaging:24.0.1")
+            // Ktor HTTP client engine + plugins for Android (voice upload)
+            implementation(libs.ktor.client.okhttp)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
+            implementation(compose.materialIconsExtended)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+
+            // Navigation
+            implementation(libs.voyager.navigator)
+            implementation(libs.voyager.screenmodel)
+
+            implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.serialization.json)
+
+            // Ktor HTTP client core only (engine added per-platform)
+            implementation(libs.ktor.client.core)
+
             implementation(projects.shared)
         }
         commonTest.dependencies {

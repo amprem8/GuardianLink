@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		C3A737582F0FB57B00D631A0 /* Shared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1207B1642F0CE8490044CB96 /* Shared.framework */; };
-		C3A737592F0FB57B00D631A0 /* Shared.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 1207B1642F0CE8490044CB96 /* Shared.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		C3A737582F0FB57B00D631A0 /* ComposeApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1207B1642F0CE8490044CB96 /* ComposeApp.framework */; };
+		C3A737592F0FB57B00D631A0 /* ComposeApp.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 1207B1642F0CE8490044CB96 /* ComposeApp.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -18,7 +18,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				C3A737592F0FB57B00D631A0 /* Shared.framework in Embed Frameworks */,
+				C3A737592F0FB57B00D631A0 /* ComposeApp.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -27,7 +27,7 @@
 
 /* Begin PBXFileReference section */
 		1207B1552F0CE8050044CB96 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		1207B1642F0CE8490044CB96 /* Shared.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Shared.framework; path = ../shared/build/bin/iosSimulatorArm64/debugFramework/Shared.framework; sourceTree = "<group>"; };
+		1207B1642F0CE8490044CB96 /* ComposeApp.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ComposeApp.framework; path = ../composeApp/build/bin/iosSimulatorArm64/debugFramework/ComposeApp.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -56,7 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C3A737582F0FB57B00D631A0 /* Shared.framework in Frameworks */,
+				C3A737582F0FB57B00D631A0 /* ComposeApp.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,7 +83,7 @@
 		1207B1632F0CE8490044CB96 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				1207B1642F0CE8490044CB96 /* Shared.framework */,
+				1207B1642F0CE8490044CB96 /* ComposeApp.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -299,7 +299,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				FRAMEWORK_SEARCH_PATHS = "$(PROJECT_DIR)/../shared/build/bin/iosSimulatorArm64/debugFramework";
+				FRAMEWORK_SEARCH_PATHS = "$(PROJECT_DIR)/../composeApp/build/bin/iosSimulatorArm64/debugFramework";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -333,7 +333,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				FRAMEWORK_SEARCH_PATHS = "$(PROJECT_DIR)/../shared/build/bin/iosSimulatorArm64/debugFramework";
+				FRAMEWORK_SEARCH_PATHS = "$(PROJECT_DIR)/../composeApp/build/bin/iosSimulatorArm64/releaseFramework";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
