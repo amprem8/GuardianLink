@@ -1,6 +1,8 @@
 package network
 
 import config.AppConfig
+import io.ktor.client.call.body
+import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -70,7 +72,7 @@ object SosPushApi {
             contentType(ContentType.Application.Json)
             setBody(request)
         }
-        val responseText = response.bodyAsText()
+        val responseText = readResponseText(response)
 
         if (!response.status.isSuccess()) {
             val parsed = runCatching {
@@ -90,6 +92,26 @@ object SosPushApi {
             throw IllegalStateException(
                 "Unexpected /sos/push response: ${responseText.take(220)}",
                 it,
+            )
+        }
+    }
+
+    private suspend fun readResponseText(response: HttpResponse): String {
+        val bytes = runCatching {
+            response.body<ByteArray>()
+        }.getOrElse { error ->
+            throw IllegalStateException(
+                "Unable to read /sos/push response (HTTP ${response.status.value})",
+                error,
+            )
+        }
+
+        return runCatching {
+            bytes.decodeToString()
+        }.getOrElse { error ->
+            throw IllegalStateException(
+                "Unable to decode /sos/push response (HTTP ${response.status.value})",
+                error,
             )
         }
     }

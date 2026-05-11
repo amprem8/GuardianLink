@@ -120,12 +120,10 @@ object SosPushHandler {
             val publishedByTarget = mutableMapOf<String, String>()
 
             val results = req.contacts.map { contact ->
-                val resolvedEndpointArn = resolveEndpointArn(contact)
                 val normalizedPhone = normalizePhone(contact.phoneNumber.orEmpty())
+                // Include GPS if coordinates are present (live OR fallback last-known location)
                 val shouldIncludeLocation = contact.includeGPS &&
-                        req.location?.permissionGranted == true &&
-                        req.location.gpsEnabled &&
-                        req.location.lat != null &&
+                        req.location?.lat != null &&
                         req.location.lng != null
 
                 val payload = mutableMapOf(
@@ -139,7 +137,7 @@ object SosPushHandler {
                 )
 
                 if (shouldIncludeLocation) {
-                    payload["lat"] = req.location.lat.toString()
+                    payload["lat"] = req.location!!.lat.toString()
                     payload["lng"] = req.location.lng.toString()
                 }
 
@@ -147,60 +145,68 @@ object SosPushHandler {
                     append(baseBody)
                     if (shouldIncludeLocation) {
                         append("\nLocation: https://maps.google.com/?q=")
-                        append(req.location.lat)
+                        append(req.location!!.lat)
                         append(",")
                         append(req.location.lng)
                     }
                 }
 
                 try {
-                    if (resolvedEndpointArn.isNotBlank()) {
-                        val targetKey = "PUSH:$resolvedEndpointArn"
-                        val existingMessageId = publishedByTarget[targetKey]
-                        if (existingMessageId != null) {
-                            return@map ContactPublishResult(
-                                contactName = contact.contactName,
-                                published = true,
-                                messageId = existingMessageId,
-                                locationIncluded = shouldIncludeLocation,
-                                deliveryMethod = "PUSH",
-                            )
-                        }
+                    // Resolve ALL endpoint ARNs for this contact — covers multi-device installs
+                    // and token rotation after reinstall
+                    val allEndpointArns = resolveAllEndpointArns(contact)
 
-                        val messageId = runCatching {
-                            SnsPushClient.publishSos(
-                                endpointArn = resolvedEndpointArn,
-                                title = "SOS Alert",
-                                body = baseBody,
-                                data = payload,
-                            )
-                        }.recoverCatching { firstError ->
-                            // EndpointDisabledException — attempt to re-enable and retry once
-                            val errName = firstError::class.simpleName.orEmpty()
-                            if (errName.contains("EndpointDisabled", ignoreCase = true) ||
-                                firstError.message?.contains("Endpoint is disabled", ignoreCase = true) == true
-                            ) {
-                                // Re-enable the endpoint in SNS (token update without new token is safe here)
-                                runCatching {
-                                    SnsPushClient.upsertEndpointAttributes(resolvedEndpointArn, resolvedEndpointArn)
-                                }
-                                // Retry publish
+                    if (allEndpointArns.isNotEmpty()) {
+                        var lastMessageId: String? = null
+                        var anySucceeded = false
+                        var lastError: String? = null
+
+                        for (arn in allEndpointArns) {
+                            val targetKey = "PUSH:$arn"
+                            val existing = publishedByTarget[targetKey]
+                            if (existing != null) {
+                                lastMessageId = existing
+                                anySucceeded = true
+                                continue
+                            }
+
+                            val msgId = runCatching {
                                 SnsPushClient.publishSos(
-                                    endpointArn = resolvedEndpointArn,
+                                    endpointArn = arn,
                                     title = "SOS Alert",
                                     body = baseBody,
                                     data = payload,
                                 )
-                            } else {
-                                throw firstError
+                            }.recoverCatching { firstError ->
+                                val isDisabled =
+                                    firstError::class.simpleName.orEmpty()
+                                        .contains("EndpointDisabled", ignoreCase = true) ||
+                                            firstError.message?.contains("Endpoint is disabled", ignoreCase = true) == true ||
+                                            firstError.message?.contains("No endpoint found", ignoreCase = true) == true
+                                if (isDisabled) {
+                                    // We cannot safely re-enable an SNS endpoint without the real FCM token.
+                                    // Passing the ARN as the token corrupts the endpoint registration.
+                                    throw firstError
+                                } else throw firstError
+                            }.getOrElse { err ->
+                                lastError = formatPublishError(err)
+                                System.err.println("Push failed for ARN $arn: ${err.message}")
+                                null
                             }
-                        }.getOrThrow()
 
-                        publishedByTarget[targetKey] = messageId
+                            if (msgId != null) {
+                                publishedByTarget[targetKey] = msgId
+                                lastMessageId = msgId
+                                anySucceeded = true
+                                lastError = null
+                            }
+                        }
+
                         return@map ContactPublishResult(
                             contactName = contact.contactName,
-                            published = true,
-                            messageId = messageId,
+                            published = anySucceeded,
+                            messageId = lastMessageId,
+                            error = if (anySucceeded) null else (lastError ?: "Push delivery failed"),
                             locationIncluded = shouldIncludeLocation,
                             deliveryMethod = "PUSH",
                         )
@@ -244,9 +250,9 @@ object SosPushHandler {
                     ContactPublishResult(
                         contactName = contact.contactName,
                         published = false,
-                        error = e::class.simpleName ?: "PublishError",
+                        error = formatPublishError(e),
                         locationIncluded = shouldIncludeLocation,
-                        deliveryMethod = if (resolvedEndpointArn.isNotBlank()) "PUSH" else "SMS",
+                        deliveryMethod = if (normalizedPhone.isNotBlank()) "SMS" else "NONE",
                     )
                 }
             }
@@ -284,6 +290,28 @@ object SosPushHandler {
 
         // 3. Fallback to static env-var map (legacy / manual override)
         return phoneEndpointMap[normalizedPhone].orEmpty()
+    }
+
+    private fun resolveAllEndpointArns(contact: SosContactTarget): List<String> {
+        val direct = contact.endpointArn.trim()
+        if (direct.isNotEmpty()) return listOf(direct)
+
+        val normalizedPhone = normalizePhone(contact.phoneNumber.orEmpty())
+        if (normalizedPhone.isEmpty()) return emptyList()
+
+        // 2. Look up all ARNs from DynamoDB — this is the live, always-current registration store
+        val fromDb = runCatching {
+            SnsEndpointRegistry.getEndpointsByPhone(normalizedPhone)
+        }.getOrElse { emptyList() }
+
+        // 3. Fallback to static env-var map (legacy / manual override) — single value only
+        val fromMap = phoneEndpointMap[normalizedPhone].orEmpty()
+        return (if (fromMap.isNotEmpty()) fromDb + fromMap else fromDb).distinct()
+    }
+
+    private fun formatPublishError(error: Throwable): String {
+        val detail = error.message?.trim().orEmpty().ifBlank { error::class.simpleName.orEmpty() }
+        return detail.take(180).ifBlank { "PublishError" }
     }
 
     private fun normalizePhone(raw: String): String {

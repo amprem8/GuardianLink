@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import network.PushRegistrationApi
 import storage.AppStorage
 
@@ -23,10 +24,24 @@ object PushRegistrationSync {
         if (!::appContext.isInitialized) {
             appContext = context.applicationContext
         }
-        sync(fcmToken, reason)
+        scope.launch { doSync(fcmToken, reason) }
     }
 
+    /** Fire-and-forget registration (used at app start / token refresh). */
     fun sync(fcmToken: String, reason: String) {
+        if (fcmToken.isBlank()) return
+        scope.launch { doSync(fcmToken, reason) }
+    }
+
+    /** Suspend until registration completes — used before SOS dispatch. */
+    suspend fun syncAndAwait(fcmToken: String, reason: String) {
+        if (fcmToken.isBlank()) return
+        // Run on IO dispatcher, directly calling the suspend register — NO runBlocking
+        withContext(Dispatchers.IO) { doSync(fcmToken, reason) }
+    }
+
+    // suspend so it can call PushRegistrationApi.register() directly without runBlocking
+    private suspend fun doSync(fcmToken: String, reason: String) {
         if (fcmToken.isBlank()) return
 
         if (!::appContext.isInitialized) {
@@ -51,24 +66,22 @@ object PushRegistrationSync {
             Settings.Secure.ANDROID_ID,
         ).orEmpty().ifBlank { "android-${System.currentTimeMillis()}" }
 
-        scope.launch {
-            runCatching {
-                PushRegistrationApi.register(
-                    PushRegistrationApi.RegisterPushRequest(
-                        phoneNumber = phone,
-                        deviceId = deviceId,
-                        fcmToken = fcmToken,
-                        platform = "ANDROID",
-                    )
+        runCatching {
+            PushRegistrationApi.register(
+                PushRegistrationApi.RegisterPushRequest(
+                    phoneNumber = phone,
+                    deviceId = deviceId,
+                    fcmToken = fcmToken,
+                    platform = "ANDROID",
                 )
-            }.onSuccess { response ->
-                Log.d(
-                    "FCM_REGISTER",
-                    "Registered ($reason): phone=${response.phoneNumber} endpoint=${response.endpointArn}",
-                )
-            }.onFailure { error ->
-                Log.w("FCM_REGISTER", "Registration failed ($reason)", error)
-            }
+            )
+        }.onSuccess { response ->
+            Log.d(
+                "FCM_REGISTER",
+                "Registered ($reason): phone=${response.phoneNumber} endpoint=${response.endpointArn}",
+            )
+        }.onFailure { error ->
+            Log.w("FCM_REGISTER", "Registration failed ($reason)", error)
         }
     }
 }

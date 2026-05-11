@@ -2,7 +2,7 @@
 
 package push
 
-actual fun refreshPushRegistrationBeforeSos() {
+actual suspend fun refreshPushRegistrationBeforeSos() {
     // iOS push registration automation is intentionally deferred in this Android-first flow.
 }
 

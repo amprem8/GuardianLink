@@ -86,6 +86,21 @@ actual object AppStorage {
         defaults.setObject(value, forKey = KEY_LAST_SOS_SENT_TEXT); defaults.synchronize()
     }
 
+    // ── Last known location ──────────────────────────────────
+    actual fun getLastKnownLat(): Double? =
+        if (defaults.objectForKey(KEY_LAST_KNOWN_LAT) == null) null
+        else defaults.doubleForKey(KEY_LAST_KNOWN_LAT).takeIf { it != 0.0 }
+
+    actual fun getLastKnownLng(): Double? =
+        if (defaults.objectForKey(KEY_LAST_KNOWN_LNG) == null) null
+        else defaults.doubleForKey(KEY_LAST_KNOWN_LNG).takeIf { it != 0.0 }
+
+    actual fun setLastKnownLocation(lat: Double, lng: Double) {
+        defaults.setDouble(lat, forKey = KEY_LAST_KNOWN_LAT)
+        defaults.setDouble(lng, forKey = KEY_LAST_KNOWN_LNG)
+        defaults.synchronize()
+    }
+
     // ── Session ─────────────────────────────────────────────
     actual fun logout() {
         defaults.setBool(false, forKey = KEY_LOGGED_IN); defaults.synchronize()
@@ -95,7 +110,8 @@ actual object AppStorage {
         listOf(KEY_REGISTERED, KEY_LOGGED_IN, KEY_USER_NAME, KEY_USER_EMAIL, KEY_PHONE,
                KEY_CONTACTS_CONFIGURED, KEY_SAFE_PIN, KEY_CONTINUOUS_MONITORING, KEY_VOICE_CHOICE,
                KEY_OFFLINE_FALLBACK_MODE, KEY_LAST_KNOWN_ONLINE,
-               KEY_LAST_GESTURE_TRIGGERED_TEXT, KEY_LAST_SOS_SENT_TEXT
+               KEY_LAST_GESTURE_TRIGGERED_TEXT, KEY_LAST_SOS_SENT_TEXT,
+               KEY_LAST_KNOWN_LAT, KEY_LAST_KNOWN_LNG,
         ).forEach { defaults.removeObjectForKey(it) }
         defaults.synchronize()
     }
@@ -117,4 +133,6 @@ actual object AppStorage {
     private const val KEY_LAST_KNOWN_ONLINE     = "lastKnownOnline"
     private const val KEY_LAST_GESTURE_TRIGGERED_TEXT = "lastGestureTriggeredText"
     private const val KEY_LAST_SOS_SENT_TEXT = "lastSosSentText"
+    private const val KEY_LAST_KNOWN_LAT = "lastKnownLat"
+    private const val KEY_LAST_KNOWN_LNG = "lastKnownLng"
 }

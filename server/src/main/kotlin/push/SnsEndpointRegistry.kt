@@ -17,7 +17,7 @@ object SnsEndpointRegistry {
         val region = System.getenv("AWS_REGION").orEmpty().trim().ifEmpty { "ap-south-1" }
         DynamoDbClient.builder()
             .region(Region.of(region))
-            .credentialsProvider(DefaultCredentialsProvider.builder().build())
+            .credentialsProvider(DefaultCredentialsProvider.create())
             .build()
     }
 

@@ -3,10 +3,11 @@
 package push
 
 /**
- * Best-effort hook to refresh push registration (used before SOS trigger).
+ * Refreshes push registration (FCM token → SNS endpoint) before an SOS is dispatched.
+ * Suspends until registration completes so the SOS trigger always uses a fresh endpoint ARN.
  *
- * Android actual fetches latest FCM token and syncs it with backend.
- * iOS actual is currently a no-op in this project.
+ * Android actual: fetches latest FCM token and syncs with backend (awaited).
+ * iOS actual: no-op in this project.
  */
-expect fun refreshPushRegistrationBeforeSos()
+expect suspend fun refreshPushRegistrationBeforeSos()
 

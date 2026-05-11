@@ -30,7 +30,7 @@ object SnsPushClient {
     private val client: SnsClient by lazy {
         SnsClient.builder()
             .region(Region.AP_SOUTH_1)
-            .credentialsProvider(DefaultCredentialsProvider.builder().build())
+            .credentialsProvider(DefaultCredentialsProvider.create())
             .build()
     }
 

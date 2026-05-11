@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Phone
@@ -80,6 +81,7 @@ enum class SOSStatus {
     LOCATING,
     CHECKING_NETWORK,
     ONLINE_SENDING,
+    FAILED,
     CALLING_CONTACTS,
     CONVERTING_AUDIO,
     SMS_SENDING,
@@ -89,7 +91,7 @@ enum class SOSStatus {
 }
 
 enum class ContactDeliveryStatus {
-    PENDING, CALLING, ANSWERED, NO_ANSWER, SENT, DELIVERED
+    PENDING, CALLING, ANSWERED, NO_ANSWER, FAILED, SENT, DELIVERED
 }
 
 enum class DeliveryMethod {
@@ -145,9 +147,9 @@ fun ActiveSOSScreen(
         if (pushResponse == null && pushError == null) return@LaunchedEffect
 
         if (pushError != null) {
-            sosStatus = SOSStatus.ONLINE_SENDING
+            sosStatus = SOSStatus.FAILED
             contactStatuses = contacts.map {
-                ContactSOSStatus(contact = it, status = ContactDeliveryStatus.NO_ANSWER)
+                ContactSOSStatus(contact = it, status = ContactDeliveryStatus.FAILED)
             }
             return@LaunchedEffect
         }
@@ -172,7 +174,7 @@ fun ActiveSOSScreen(
             } else {
                 ContactSOSStatus(
                     contact = contact,
-                    status = ContactDeliveryStatus.NO_ANSWER,
+                    status = ContactDeliveryStatus.FAILED,
                     method = when (result.deliveryMethod) {
                         "SMS" -> DeliveryMethod.SMS
                         "PUSH" -> DeliveryMethod.INTERNET
@@ -540,7 +542,11 @@ private fun StatusCard(
                 modifier = Modifier
                     .size(10.dp)
                     .background(
-                        if (sosStatus == SOSStatus.SUCCESS) Color(0xFF22C55E) else Color(0xFF3B82F6),
+                        when (sosStatus) {
+                            SOSStatus.SUCCESS -> Color(0xFF22C55E)
+                            SOSStatus.FAILED -> Color(0xFFEF4444)
+                            else -> Color(0xFF3B82F6)
+                        },
                         CircleShape,
                     ),
             )
@@ -629,6 +635,7 @@ private fun StatusCard(
         // ── Contact statuses ──
         val showContacts = sosStatus in listOf(
             SOSStatus.ONLINE_SENDING,
+            SOSStatus.FAILED,
             SOSStatus.CALLING_CONTACTS,
             SOSStatus.CONVERTING_AUDIO,
             SOSStatus.SMS_SENDING,
@@ -732,6 +739,7 @@ private fun ContactStatusRow(cs: ContactSOSStatus) {
             ContactDeliveryStatus.CALLING -> StatusBadge("Calling...", Color(0xFF2563EB), Color(0xFFDBEAFE), Icons.Default.PhoneInTalk)
             ContactDeliveryStatus.ANSWERED -> StatusBadge("Answered", Color(0xFF15803D), Color(0xFFDCFCE7), Icons.Default.Phone)
             ContactDeliveryStatus.NO_ANSWER -> StatusBadge("No Answer", Color(0xFF6B7280), Color(0xFFF3F4F6), Icons.Default.PhoneDisabled)
+            ContactDeliveryStatus.FAILED -> StatusBadge("Delivery Failed", Color(0xFFB91C1C), Color(0xFFFEF2F2), Icons.Default.ErrorOutline)
             ContactDeliveryStatus.SENT -> StatusBadge("Sent", Color(0xFF2563EB), Color(0xFFDBEAFE))
             ContactDeliveryStatus.DELIVERED -> StatusBadge("Delivered", Color(0xFF15803D), Color(0xFFDCFCE7), Icons.Default.Check)
         }
@@ -984,6 +992,7 @@ private fun getStatusMessage(status: SOSStatus, someoneAnswered: Boolean): Strin
     SOSStatus.LOCATING -> "Acquiring GPS location..."
     SOSStatus.CHECKING_NETWORK -> "Checking network connectivity..."
     SOSStatus.ONLINE_SENDING -> "Sending alerts via internet to all contacts..."
+    SOSStatus.FAILED -> "SOS delivery failed before any contact could be reached. Refresh push registration and retry."
     SOSStatus.CALLING_CONTACTS -> "Calling emergency contacts..."
     SOSStatus.CONVERTING_AUDIO -> "Converting audio message to text..."
     SOSStatus.SMS_SENDING -> if (someoneAnswered) "Someone answered! Sending location SMS..."

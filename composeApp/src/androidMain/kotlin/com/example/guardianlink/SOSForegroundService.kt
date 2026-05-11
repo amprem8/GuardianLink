@@ -21,7 +21,6 @@ import kotlinx.coroutines.launch
 import location.MainActivityHolder
 import location.getCurrentLocationOrNull
 import network.SosPushApi
-import push.refreshPushRegistrationBeforeSos
 import storage.AppStorage
 import storage.ContactStorage
 import storage.TriggerConfigStorage
@@ -125,18 +124,25 @@ class SOSForegroundService : Service() {
                     return@launch
                 }
 
-                refreshPushRegistrationBeforeSos()
+                // Await token refresh so SNS endpoint is always current before the push
+                runCatching {
+                    push.refreshPushRegistrationBeforeSos()
+                }.onFailure { Log.w(TAG, "Pre-SOS registration failed", it) }
 
                 val victimName = AppStorage.getUserName().ifBlank { "User" }
                 val victimUserId = AppStorage.getUserEmail()
                     .ifBlank { AppStorage.getPhoneNumber().ifBlank { "user" } }
 
-                val latestLocation = getCurrentLocationOrNull()
+                // Live location — fall back to last persisted location if GPS is off
+                val liveLocation = runCatching { getCurrentLocationOrNull() }.getOrNull()
+                val resolvedLat = liveLocation?.latitude ?: AppStorage.getLastKnownLat()
+                val resolvedLng = liveLocation?.longitude ?: AppStorage.getLastKnownLng()
+
                 val location = SosPushApi.SosLocationContext(
-                    permissionGranted = latestLocation != null,
-                    gpsEnabled = latestLocation != null,
-                    lat = latestLocation?.latitude,
-                    lng = latestLocation?.longitude,
+                    permissionGranted = resolvedLat != null,
+                    gpsEnabled = liveLocation != null,
+                    lat = resolvedLat,
+                    lng = resolvedLng,
                 )
 
                 val response = SosPushApi.trigger(

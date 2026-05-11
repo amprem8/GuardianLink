@@ -81,6 +81,24 @@ actual object AppStorage {
         prefs.edit().putString(KEY_LAST_SOS_SENT_TEXT, value).commit()
     }
 
+    // ── Last known location ──────────────────────────────────
+    actual fun getLastKnownLat(): Double? {
+        val v = prefs.getString(KEY_LAST_KNOWN_LAT, null) ?: return null
+        return v.toDoubleOrNull()
+    }
+
+    actual fun getLastKnownLng(): Double? {
+        val v = prefs.getString(KEY_LAST_KNOWN_LNG, null) ?: return null
+        return v.toDoubleOrNull()
+    }
+
+    actual fun setLastKnownLocation(lat: Double, lng: Double) {
+        prefs.edit()
+            .putString(KEY_LAST_KNOWN_LAT, lat.toString())
+            .putString(KEY_LAST_KNOWN_LNG, lng.toString())
+            .commit()
+    }
+
     // ── Session ─────────────────────────────────────────────
     actual fun logout() { prefs.edit().putBoolean(KEY_LOGGED_IN, false).commit() }
     actual fun clear() { prefs.edit().clear().commit() }
@@ -102,4 +120,6 @@ actual object AppStorage {
     private const val KEY_LAST_KNOWN_ONLINE     = "lastKnownOnline"
     private const val KEY_LAST_GESTURE_TRIGGERED_TEXT = "lastGestureTriggeredText"
     private const val KEY_LAST_SOS_SENT_TEXT = "lastSosSentText"
+    private const val KEY_LAST_KNOWN_LAT = "lastKnownLat"
+    private const val KEY_LAST_KNOWN_LNG = "lastKnownLng"
 }

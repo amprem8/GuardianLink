@@ -63,6 +63,11 @@ expect object AppStorage {
     fun getLastSosSentText(): String
     fun setLastSosSentText(value: String)
 
+    // ── Last known location (persisted fallback for SOS) ────
+    fun getLastKnownLat(): Double?
+    fun getLastKnownLng(): Double?
+    fun setLastKnownLocation(lat: Double, lng: Double)
+
     // ── Session ─────────────────────────────────────────────
 
     /** Clear login session but keep registration data (user can re-login). */

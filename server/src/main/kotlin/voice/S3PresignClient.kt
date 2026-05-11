@@ -22,14 +22,14 @@ object S3PresignClient {
         //   3. ~/.aws/credentials for local development
         S3Presigner.builder()
             .region(Region.AP_SOUTH_1)
-            .credentialsProvider(DefaultCredentialsProvider.builder().build())
+            .credentialsProvider(DefaultCredentialsProvider.create())
             .build()
     }
 
     /**
      * Returns a Pair(presignedPutUrl, s3Key) valid for [URL_VALIDITY_MINUTES] minutes.
      * Single source of truth for key construction — callers never need to duplicate the
-     * sanitise logic.
+     * sanitize logic.
      */
     fun presignPutUrlWithKey(username: String, phrase: String): Pair<String, String> {
         val safeUsername = sanitise(username)
